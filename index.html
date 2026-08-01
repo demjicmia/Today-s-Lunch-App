@@ -239,12 +239,6 @@
 
   </main>
 
-  <div v-if="currentTab === 'restaurant'" class="fixed bottom-6 right-6 z-30 flex flex-col gap-2">
-    <button @click.stop="rollDice" class="w-14 h-14 bg-hunter text-white rounded-full shadow-2xl flex items-center justify-center text-2xl hover:scale-105 active:scale-95 transition-all">
-      🎲
-    </button>
-  </div>
-
   <div v-if="showModal" class="fixed inset-0 bg-black/50 z-40 flex items-end sm:items-center justify-center p-0 sm:p-4" @click="showModal = false">
     <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 max-h-[90vh] overflow-y-auto" @click.stop>
       <div class="flex justify-between items-center mb-4">
@@ -362,26 +356,6 @@
     </div>
   </div>
 
-  <div v-if="showDiceModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" @click="showDiceModal = false">
-    <div class="bg-white w-full max-w-sm rounded-2xl p-6 text-center shadow-2xl border border-gray-100" @click.stop>
-      <span class="text-4xl block mb-2 animate-bounce">🎲</span>
-      <h3 class="text-base font-bold text-gray-500 mb-1">오늘 점심 메뉴 결정 완료!</h3>
-      <p class="text-xs text-gray-400 mb-4">고민하지 말고 여기 어때요?</p>
-      
-      <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-5">
-        <span class="inline-block text-[10px] bg-emerald-600 text-white font-black px-2 py-0.5 rounded mb-1">{{ pickedStore?.category || '추천' }}</span>
-        <h2 class="text-xl font-black text-gray-800">{{ pickedStore?.name || '등록된 음식점' }}</h2>
-        <p class="text-xs text-gray-500 mt-1">📍 {{ pickedStore?.location || '위치 미등록' }}</p>
-        <p v-if="pickedStore?.memo" class="text-xs text-emerald-700 font-medium mt-2 bg-white/60 py-1 rounded">"{{ pickedStore?.memo }}"</p>
-      </div>
-
-      <div class="grid grid-cols-2 gap-2">
-        <button @click="rollDice" class="py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs">한 번 더 돌리기</button>
-        <button @click="showDiceModal = false" class="py-2.5 bg-hunter text-white rounded-xl font-bold text-xs shadow-md">여기 가기!</button>
-      </div>
-    </div>
-  </div>
-
 </div>
 
 <script>
@@ -412,9 +386,6 @@
 
         showImageModal: false,
         currentViewImage: '',
-
-        showDiceModal: false,
-        pickedStore: null,
 
         cafeterias: [],
         restaurants: [],
@@ -566,16 +537,6 @@
       viewMenuImage(imgBase64) {
         this.currentViewImage = imgBase64;
         this.showImageModal = true;
-      },
-      rollDice() {
-        if (this.restaurants.length === 0) {
-          alert('추천할 일반음식점 데이터가 없습니다. 먼저 식당을 등록해주세요!');
-          this.showDiceModal = false;
-          return;
-        }
-        const randomIndex = Math.floor(Math.random() * this.restaurants.length);
-        this.pickedStore = this.restaurants[randomIndex];
-        this.showDiceModal = true;
       },
       async handleImageUpload(event, item, isInModal = false) {
         const file = event.target.files[0];

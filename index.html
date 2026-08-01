@@ -103,7 +103,7 @@
   <main class="p-4 flex-1">
     
     <div v-if="currentTab === 'cafeteria'">
-      <div class="grid grid-cols-2 gap-3">
+      <div v-if="cafeterias.length > 0" class="grid grid-cols-2 gap-3">
         <div v-for="(item, idx) in cafeterias" :key="item.id" class="bg-white rounded-2xl p-3 border border-gray-100 card-shadow flex flex-col justify-between relative">
           
           <div>
@@ -117,7 +117,7 @@
               </span>
 
               <div class="relative shrink-0 dropdown-container">
-                <button @click.stop="toggleDropdown(item)" class="text-gray-400 hover:text-gray-600 p-1">
+                <button @click.stop="toggleDropdown(item)" class="text-gray-404 hover:text-gray-600 p-1">
                   <i class="fa-solid fa-ellipsis-vertical"></i>
                 </button>
                 <div v-if="item.showDrop" class="absolute right-0 mt-1 w-28 bg-white border rounded-xl shadow-lg z-20 py-1 text-xs text-left" @click.stop>
@@ -131,7 +131,7 @@
               </div>
             </div>
 
-            <p class="text-[10px] text-gray-400 truncate">📍 {{ item.location }}</p>
+            <p class="text-[10px] text-gray-404 truncate">📍 {{ item.location }}</p>
             <span v-if="item.memo" class="inline-block max-w-full text-[9px] bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded-md mt-1 truncate font-medium">
               💬 {{ item.memo }}
             </span>
@@ -148,7 +148,7 @@
               </a>
             </template>
             <template v-else>
-              <div v-if="!item.weekly_menus || !item.weekly_menus[selectedDay]" class="text-[11px] text-gray-400 py-3 text-center bg-gray-50/50 rounded-xl mb-2">
+              <div v-if="!item.weekly_menus || !item.weekly_menus[selectedDay]" class="text-[11px] text-gray-404 py-3 text-center bg-gray-50/55 rounded-xl mb-2">
                 등록된 메뉴 없음
               </div>
               
@@ -169,6 +169,9 @@
             <button @click="deleteCafeteria(item.id)" class="text-red-400">삭제</button>
           </div>
         </div>
+      </div>
+      <div v-else class="text-center py-12 text-gray-400 text-xs">
+        등록된 구내식당이 없습니다. 오른쪽 위의 '+ 식당 추가'로 등록해 보세요!
       </div>
 
       <div class="mt-4 bg-orange-50 border border-orange-200 rounded-xl p-3 flex items-center gap-2 text-orange-800 shadow-sm">
@@ -201,7 +204,7 @@
             </span>
 
             <div class="relative dropdown-container">
-              <button @click.stop="toggleDropdown(item)" class="text-gray-400 hover:text-gray-600 p-1">
+              <button @click.stop="toggleDropdown(item)" class="text-gray-404 hover:text-gray-600 p-1">
                 <i class="fa-solid fa-ellipsis-vertical"></i>
               </button>
               <div v-if="item.showDrop" class="absolute right-0 mt-1 w-28 bg-white border rounded-xl shadow-lg z-20 py-1 text-xs text-left" @click.stop>
@@ -325,7 +328,7 @@
           <img :src="editingCafeteria.weekly_images[selectedDay]" class="w-full h-32 object-contain rounded-lg border bg-white" alt="식단 이미지">
           <button @click="deleteCurrentImage" class="text-red-500 text-[10px] font-bold mt-1 hover:underline block text-right">✕ 이미지 삭제</button>
         </div>
-        <div v-else class="text-[11px] text-gray-400 py-4 text-center bg-white rounded-lg border border-dashed mb-2">
+        <div v-else class="text-[11px] text-gray-404 py-4 text-center bg-white rounded-lg border border-dashed mb-2">
           등록된 이미지가 없습니다.
         </div>
 
@@ -358,7 +361,6 @@
 
 <script>
   window.addEventListener('DOMContentLoaded', () => {
-    // Supabase 클라이언트 안전 생성
     const SUPABASE_URL = 'https://ocjnfrjmgmwgatlbfkqx.supabase.co'; 
     const SUPABASE_KEY = 'sb_publishable_G2c0vjwpxVtc5vUWY0QbdQ_npNiE'; 
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -471,6 +473,9 @@
           this.showModal = true;
         },
         async saveStore() {
+          // 데이터베이스 호환 정수형 랜덤 ID 생성 (최대 6자리)
+          const randomId = Math.floor(100000 + Math.random() * 900000);
+
           if (this.form.type === 'cafeteria') {
             const payload = {
               name: this.form.name,
@@ -484,11 +489,12 @@
             if (this.isEditing) {
               await supabaseClient.from('cafeterias').update(payload).eq('id', this.form.id);
             } else {
-              payload.id = Date.now();
+              payload.id = randomId;
               payload.weekly_menus = {};
               payload.weekly_images = {};
               await supabaseClient.from('cafeterias').insert([payload]);
             }
+            this.currentTab = 'cafeteria'; // 추가 후 해당 탭으로 강제 이동
           } else {
             const payload = {
               name: this.form.name,
@@ -501,10 +507,13 @@
             if (this.isEditing) {
               await supabaseClient.from('restaurants').update(payload).eq('id', this.form.id);
             } else {
-              payload.id = Date.now();
+              payload.id = randomId;
               await supabaseClient.from('restaurants').insert([payload]);
             }
+            this.currentTab = 'restaurant'; // 추가 후 해당 탭으로 강제 이동
+            this.selectedCategory = '전체'; // 필터에 가려지지 않도록 전체로 설정
           }
+          
           await this.fetchData();
           this.showModal = false;
         },

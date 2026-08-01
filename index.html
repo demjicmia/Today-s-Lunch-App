@@ -288,7 +288,7 @@
 
   </main>
 
-  <div v-if="showModal" class="fixed inset-0 bg-black/50 z-40 flex items-end sm:items-center justify-center p-0 sm:p-4" @click="showModal = false">
+  <div v-if="showModal" class="fixed inset-0 bg-black/50 z-40 flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 max-h-[90vh] overflow-y-auto" @click.stop>
       <div class="flex justify-between items-center mb-4">
         <h2 class="font-bold text-lg text-gray-800">{{ isEditing ? '식당 정보 수정' : '식당 추가하기' }}</h2>
@@ -363,7 +363,7 @@
     </div>
   </div>
 
-  <div v-if="showMenuTextModal" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4" @click="showMenuTextModal = false">
+  <div v-if="showMenuTextModal" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-md rounded-2xl p-5 shadow-2xl max-h-[90vh] overflow-y-auto" @click.stop>
       <div class="flex justify-between items-center mb-3">
         <h2 class="font-bold text-base text-gray-800">📝 메뉴 수정하기</h2>
@@ -437,7 +437,6 @@
           isEditing: false,
           isSubmitting: false, 
           
-          // OCR 로딩 관련 상태
           isOcrProcessing: false,
           ocrProgress: 0,
           ocrStatusText: '이미지를 분석할 준비 중입니다...',
@@ -478,7 +477,6 @@
         setTimeout(() => { this.showIntro = false; }, 2000);
         this.initDateTime();
 
-        // Supabase Auth 세션 유지 체크
         const { data: { session } } = await supabaseClient.auth.getSession();
         if (session) {
           this.isAdmin = true;
@@ -539,7 +537,7 @@
           localStorage.setItem('my_session_id', mySessionId);
 
           if (item.editingBy && item.editingBy !== mySessionId) {
-            alert("다른 유저가 수정 중입니다!");
+            alert("다른 유저가 수정 중입니다 🚨");
             return;
           }
           this.openEditModal(item);
@@ -550,7 +548,7 @@
           localStorage.setItem('my_session_id', mySessionId);
 
           if (item.editingBy && item.editingBy !== mySessionId) {
-            alert("다른 유저가 수정 중입니다!");
+            alert("다른 유저가 수정 중입니다 🚨");
             return;
           }
           this.openMenuTextModal(item);
@@ -682,7 +680,6 @@
           this.closeAllDropdowns();
           item.showDrop = !currentStatus;
         },
-        // Supabase Auth를 통한 안전한 관리자 로그인/로그아웃 연동
         async toggleAdmin() {
           if (!this.isAdmin) {
             const email = prompt('관리자 이메일을 입력하세요:');
@@ -843,12 +840,10 @@
           this.currentViewImage = imgBase64;
           this.showImageModal = true;
         },
-        // OCR 로딩 프로그레스바 및 타임아웃 예외 처리 적용 메서드
         async handleImageUpload(event, item) {
           const file = event.target.files[0];
           if (!file) return;
 
-          // 1. 이미지 Base64 변환 및 DB 저장
           const reader = new FileReader();
           reader.onload = async (e) => {
             const base64Img = e.target.result;
@@ -858,12 +853,10 @@
           };
           reader.readAsDataURL(file);
 
-          // 2. OCR 진행 상태 활성화
           this.isOcrProcessing = true;
           this.ocrProgress = 0;
           this.ocrStatusText = '이미지를 불러오는 중...';
 
-          // 3. 15초 타임아웃 방어 메커니즘 설정
           let isTimedOut = false;
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => {
@@ -891,7 +884,7 @@
             
             await this.fetchData();
             this.isOcrProcessing = false;
-            alert("식단표 인식 완료! 잘못 인식된 텍스트는 수정해 주세요 ✍️");
+            alert("잘못 인식된 메뉴는 직접 텍스트 수정해주세요! ✍️");
             
             const updatedItem = this.cafeterias.find(c => c.id === item.id);
             this.openMenuTextModal(updatedItem || item);

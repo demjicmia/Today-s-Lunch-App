@@ -63,12 +63,12 @@
     </div>
 
     <div class="grid grid-cols-2 gap-2 p-1 bg-gray-200/60 rounded-xl">
-      <button @click="currentTab = 'cafeteria'" 
+      <button @click="setTab('cafeteria')" 
               :class="currentTab === 'cafeteria' ? 'bg-hunter text-white shadow' : 'text-gray-600'"
               class="py-2.5 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2">
         🏢 구내식당
       </button>
-      <button @click="currentTab = 'restaurant'" 
+      <button @click="setTab('restaurant')" 
               :class="currentTab === 'restaurant' ? 'bg-hunter text-white shadow' : 'text-gray-600'"
               class="py-2.5 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2">
         🍜 일반음식점
@@ -79,9 +79,9 @@
       <button v-for="day in days" :key="day" 
               @click="selectedDay = day"
               :class="selectedDay === day ? 'bg-terracotta text-white font-bold' : 'bg-white text-gray-600 border border-gray-200'"
-              class="flex-1 py-2 rounded-xl text-xs transition-all text-center">
+              class="flex-1 py-2 rounded-xl text-xs transition-all text-center relative">
         {{ day }}
-        <span v-if="day === todayName" class="block text-[9px] leading-none mt-0.5 opacity-80">오늘</span>
+        <span v-if="day === todayName" class="block text-[9px] leading-none mt-0.5 opacity-80 font-black text-yellow-300">오늘</span>
       </button>
     </div>
 
@@ -174,11 +174,19 @@
         등록된 구내식당이 없습니다. 오른쪽 위의 '+ 식당 추가'로 등록해 보세요!
       </div>
 
-      <div class="mt-4 bg-orange-50 border border-orange-200 rounded-xl p-3 flex items-center gap-2 text-orange-800 shadow-sm">
-        <span class="text-base">💡</span>
-        <p class="text-[11px] font-medium leading-snug">
-          주요 인스타 연동 구내식당은 <strong>오전 11시 전후</strong>로 당일 메뉴가 업데이트됩니다!
-        </p>
+      <div class="mt-4 space-y-2">
+        <div class="bg-orange-50 border border-orange-200 rounded-xl p-3 flex items-center gap-2 text-orange-800 shadow-sm">
+          <span class="text-base">💡</span>
+          <p class="text-[11px] font-medium leading-snug">
+            주요 인스타 연동 구내식당은 <strong>오전 11시 전후</strong>로 당일 메뉴가 업데이트됩니다!
+          </p>
+        </div>
+        <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-2 text-blue-800 shadow-sm">
+          <span class="text-base">🔄</span>
+          <p class="text-[11px] font-medium leading-snug">
+            구내식당 메뉴 리스트는 <strong>매주 일요일 밤 12시(23:59)</strong>에 자동으로 리셋됩니다.
+          </p>
+        </div>
       </div>
     </div>
 
@@ -374,7 +382,7 @@
           currentTab: 'cafeteria',
           selectedDay: '월',
           selectedCategory: '전체',
-          todayName: '', // 주말 예외 처리를 위해 공백으로 초기화
+          todayName: '',
           days: ['월', '화', '수', '목', '금'],
           categories: ['한식', '중식', '일식', '양식', '분식', '기타'],
           isAdmin: false,
@@ -405,35 +413,99 @@
       async mounted() {
         setTimeout(() => { this.showIntro = false; }, 2000);
         
-        const dayIdx = new Date().getDay();
-        const correctMap = ['', '월', '화', '수', '목', '금', ''];
+        // 날짜 요일 판별 (한주의 시작: 월요일=1 ~ 토요일=6, 일요일=0)
+        const now = new Date();
+        const dayIdx = now.getDay(); 
+        const correctMap = { 1: '월', 2: '화', 3: '수', 4: '목', 5: '금' };
         
-        // 평일(월~금)일 때만 해당하는 요일을 선택하고 '오늘' 태그 설정
         if (dayIdx >= 1 && dayIdx <= 5) {
+          // 평일(월~금)일 때
+          this.currentTab = 'cafeteria';
           this.selectedDay = correctMap[dayIdx];
           this.todayName = correctMap[dayIdx];
         } else {
-          // 주말(토, 일)에는 기본 뷰를 월요일로 보여주되, '오늘' 붉은 태그는 제거
-          this.selectedDay = '월';
+          // 주말(토요일=6, 일요일=0)일 때 예외 처리
           this.todayName = '';
+          this.selectedDay = '월'; // 탭 자체 기본 선택은 월로 세팅
+          this.currentTab = 'restaurant'; // 기본 활성 탭을 일반음식점으로 세팅
+          
+          // 사용자 경험을 보장하기 위해 인트로 화면 이후(2.2초 뒤) 알럿을 띄웁니다.
+          setTimeout(() => {
+            alert("주말에는 일반음식점을 이용해주세요 😉");
+          }, 2200);
         }
 
         document.addEventListener('click', this.handleOutsideClick);
         await this.fetchData();
+        
+        // 데이터 로드 완료 후 매주 일요일 23:59 리셋 기준 체크 실행
+        await this.checkAndResetWeeklyMenus();
       },
       beforeUnmount() {
         document.removeEventListener('click', this.handleOutsideClick);
       },
       methods: {
+        setTab(tab) {
+          const dayIdx = new Date().getDay();
+          // 토요일(6) 혹은 일요일(0)에 구내식당 클릭 시 차단 알럿 후 유지
+          if (tab === 'cafeteria' && (dayIdx === 0 || dayIdx === 6)) {
+            alert("주말에는 일반음식점을 이용해주세요 😉");
+            this.currentTab = 'restaurant';
+            return;
+          }
+          this.currentTab = tab;
+        },
         async fetchData() {
-          const { data: cafData, error: cafErr } = await supabaseClient.from('cafeterias').select('*').order('created_at', { ascending: true });
+          const { data: cafData } = await supabaseClient.from('cafeterias').select('*').order('created_at', { ascending: true });
           if (cafData) {
             this.cafeterias = cafData.map(c => ({ ...c, showDrop: false }));
           }
 
-          const { data: resData, error: resErr } = await supabaseClient.from('restaurants').select('*').order('created_at', { ascending: true });
+          const { data: resData } = await supabaseClient.from('restaurants').select('*').order('created_at', { ascending: true });
           if (resData) {
             this.restaurants = resData.map(r => ({ ...r, showDrop: false, expanded: false }));
+          }
+        },
+        // [핵심] 매주 일요일 23:59 기준 메뉴 초기화 체크 로직
+        async checkAndResetWeeklyMenus() {
+          if (this.cafeterias.length === 0) return;
+
+          // 이번 주의 월요일 날짜 구하기
+          const now = new Date();
+          const currentDay = now.getDay();
+          const distanceToMonday = currentDay === 0 ? -6 : 1 - currentDay; 
+          const mondayDate = new Date(now);
+          mondayDate.setDate(now.getDate() + distanceToMonday);
+          mondayDate.setHours(0, 0, 0, 0);
+          
+          const currentWeekKey = mondayDate.toISOString().split('T')[0]; // 예: "2026-08-03"
+          const localStorageKey = 'last_reset_week_key';
+          const lastResetWeek = localStorage.getItem(localStorageKey);
+
+          // 로컬스토리지에 저장된 주차 키가 다르다면 데이터 리셋 대상
+          if (lastResetWeek !== currentWeekKey) {
+            let needsDbUpdate = false;
+
+            for (let caf of this.cafeterias) {
+              // 등록된 메뉴(weekly_menus) 또는 이미지(weekly_images)에 데이터가 있는지 판별
+              const hasMenus = caf.weekly_menus && Object.keys(caf.weekly_menus).length > 0;
+              const hasImages = caf.weekly_images && Object.keys(caf.weekly_images).length > 0;
+
+              if (hasMenus || hasImages) {
+                needsDbUpdate = true;
+                // 식당 고유 정보 및 인스타 정보는 완벽히 유지하고 메뉴 정보들만 빈 객체화
+                await supabaseClient.from('cafeterias').update({
+                  weekly_menus: {},
+                  weekly_images: {}
+                }).eq('id', caf.id);
+              }
+            }
+
+            localStorage.setItem(localStorageKey, currentWeekKey);
+            if (needsDbUpdate) {
+              await this.fetchData();
+              console.log('새로운 주가 시작되어 구내식당 식단 텍스트 및 사진 정보가 리셋되었습니다.');
+            }
           }
         },
         getEmptyForm() {

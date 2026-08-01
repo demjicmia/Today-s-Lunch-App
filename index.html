@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
   <script>
     tailwind.config = {
@@ -41,7 +42,7 @@
         🍱
       </div>
       <h1 class="text-2xl font-bold mb-2">오늘 점심 뭐 먹지?</h1>
-      <p class="text-sm opacity-80">행복한 메뉴 고민을 시작합니다!</p>
+      <p class="text-sm opacity-80">실시간 공유 DB 연결 완료!</p>
     </div>
   </div>
 
@@ -51,7 +52,7 @@
         <h1 class="text-2xl font-black text-gray-800 flex items-center gap-2">
           오늘의 점심 식당은? <span class="text-xl">🍽️</span>
         </h1>
-        <p class="text-xs text-gray-500 mt-0.5">지속적인 식당 및 메뉴 관리가 가능합니다.</p>
+        <p class="text-xs text-gray-500 mt-0.5">팀원 전체가 실시간 공유하는 점심 메뉴</p>
       </div>
       <div class="flex gap-2">
         <button @click.stop="toggleAdmin" class="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm font-medium text-gray-600 hover:bg-gray-50">
@@ -139,22 +140,22 @@
           </div>
 
           <div class="mt-2 border-t border-dashed border-gray-100 pt-2">
-            <div v-if="item.weeklyMenus && item.weeklyMenus[selectedDay]" class="text-left text-xs text-gray-700 whitespace-pre-line mb-2 bg-gray-50 p-2 rounded-lg border border-gray-100">
-              {{ item.weeklyMenus[selectedDay] }}
+            <div v-if="item.weekly_menus && item.weekly_menus[selectedDay]" class="text-left text-xs text-gray-700 whitespace-pre-line mb-2 bg-gray-50 p-2 rounded-lg border border-gray-100">
+              {{ item.weekly_menus[selectedDay] }}
             </div>
 
-            <template v-if="item.hasInsta">
-              <a :href="item.instaUrl" target="_blank" class="w-full py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow-sm">
+            <template v-if="item.has_insta">
+              <a :href="item.insta_url" target="_blank" class="w-full py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow-sm">
                 <i class="fa-brands fa-instagram"></i> 인스타로 보기
               </a>
             </template>
             <template v-else>
-              <div v-if="!item.weeklyMenus || !item.weeklyMenus[selectedDay]" class="text-[11px] text-gray-400 py-3 text-center bg-gray-50/50 rounded-xl mb-2">
+              <div v-if="!item.weekly_menus || !item.weekly_menus[selectedDay]" class="text-[11px] text-gray-400 py-3 text-center bg-gray-50/50 rounded-xl mb-2">
                 등록된 메뉴 없음
               </div>
               
-              <button v-if="item.weeklyImages && item.weeklyImages[selectedDay]" 
-                      @click="viewMenuImage(item.weeklyImages[selectedDay])"
+              <button v-if="item.weekly_images && item.weekly_images[selectedDay]" 
+                      @click="viewMenuImage(item.weekly_images[selectedDay])"
                       class="w-full mb-1.5 py-1 text-center bg-gray-200 hover:bg-gray-300 text-gray-700 text-[10px] font-bold rounded-lg block">
                 🖼️ 메뉴 이미지로 보기
               </button>
@@ -167,9 +168,7 @@
           </div>
 
           <div v-if="isAdmin" class="mt-2 flex justify-between border-t border-gray-100 pt-1 text-[11px] text-gray-400">
-            <button @click="moveItem(cafeterias, idx, -1)">◀ 이동</button>
-            <button @click="deleteItem(cafeterias, idx)" class="text-red-400">삭제</button>
-            <button @click="moveItem(cafeterias, idx, 1)">이동 ▶</button>
+            <button @click="deleteCafeteria(item.id)" class="text-red-400">삭제</button>
           </div>
         </div>
       </div>
@@ -225,14 +224,12 @@
         <div v-if="item.expanded" class="mt-3 space-y-2 border-t border-gray-100 pt-2">
           <div v-for="menu in item.menus" :key="menu.name" class="flex justify-between text-xs py-1 border-b border-gray-50">
             <span class="text-gray-700 font-medium">{{ menu.name }}</span>
-            <span class="text-terracotta font-bold">{{ menu.price.toLocaleString() }}원</span>
+            <span class="text-terracotta font-bold">{{ menu.price ? menu.price.toLocaleString() + '원' : '' }}</span>
           </div>
         </div>
 
-        <div v-if="isAdmin" class="mt-2 flex justify-between border-t pt-1 text-xs text-gray-400">
-          <button @click="moveItem(restaurants, idx, -1)">▲ 위로</button>
-          <button @click="deleteItem(restaurants, idx)" class="text-red-400">삭제</button>
-          <button @click="moveItem(restaurants, idx, 1)">▼ 아래로</button>
+        <div v-if="isAdmin" class="mt-2 flex justify-end border-t pt-1 text-xs text-gray-400">
+          <button @click="deleteRestaurant(item.id)" class="text-red-400">삭제</button>
         </div>
       </div>
       <div v-if="filteredRestaurants.length === 0" class="text-center py-12 text-gray-400 text-xs">
@@ -287,9 +284,9 @@
           <div class="p-3 bg-gray-50 rounded-xl space-y-2">
             <div class="flex justify-between items-center">
               <span class="text-xs font-bold text-gray-700">인스타그램 연동 사용 유무</span>
-              <input type="checkbox" v-model="form.hasInsta" class="w-4 h-4 accent-hunter">
+              <input type="checkbox" v-model="form.has_insta" class="w-4 h-4 accent-hunter">
             </div>
-            <input v-if="form.hasInsta" v-model="form.instaUrl" placeholder="인스타 URL 혹은 ID 입력" class="w-full p-2 text-xs border rounded-lg">
+            <input v-if="form.has_insta" v-model="form.insta_url" placeholder="인스타 URL 혹은 ID 입력" class="w-full p-2 text-xs border rounded-lg">
           </div>
         </template>
 
@@ -332,8 +329,8 @@
       <div class="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
         <label class="block text-xs font-bold text-gray-600 mb-1.5">등록된 식단표 이미지</label>
         
-        <div v-if="editingCafeteria?.weeklyImages && editingCafeteria.weeklyImages[selectedDay]" class="mb-2">
-          <img :src="editingCafeteria.weeklyImages[selectedDay]" class="w-full h-32 object-contain rounded-lg border bg-white" alt="식단 이미지">
+        <div v-if="editingCafeteria?.weekly_images && editingCafeteria.weekly_images[selectedDay]" class="mb-2">
+          <img :src="editingCafeteria.weekly_images[selectedDay]" class="w-full h-32 object-contain rounded-lg border bg-white" alt="식단 이미지">
           <button @click="deleteCurrentImage" class="text-red-500 text-[10px] font-bold mt-1 hover:underline block text-right">✕ 이미지 삭제</button>
         </div>
         <div v-else class="text-[11px] text-gray-400 py-4 text-center bg-white rounded-lg border border-dashed mb-2">
@@ -388,6 +385,11 @@
 </div>
 
 <script>
+  // Supabase 클라이언트 초기화
+  const SUPABASE_URL = 'https://ocjnfrjmgmwgatlbfkqx.supabase.co/rest/v1/'; // <--- 여기에 URL 입력
+  const SUPABASE_KEY = 'sb_publishable_G2cOvjwpxVtc5vUWY0QbdQ_npNiElOi'; // <--- 여기에 KEY 입력
+  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
   const { createApp } = Vue;
 
   createApp({
@@ -414,14 +416,8 @@
         showDiceModal: false,
         pickedStore: null,
 
-        cafeterias: JSON.parse(localStorage.getItem('cafeterias_v5')) || [
-          { id: 1, name: '오늘의 정식(본관)', location: '5층', price: 7500, memo: '11시 반 가야 한산함', hasInsta: false, showDrop: false, weeklyMenus: { '월': '바몬드카레라이스\n마늘쫑건새우볶음\n쪽파김무침\n그린샐러드' }, weeklyImages: {} },
-          { id: 2, name: '런치의 여유', location: '옆건물 지하1층', price: 7500, memo: '커피 500원 할인쿠폰', hasInsta: true, instaUrl: 'https://www.instagram.com/', showDrop: false, weeklyMenus: {} }
-        ],
-        restaurants: JSON.parse(localStorage.getItem('restaurants_v5')) || [
-          { id: 101, name: '카츠 신가', category: '일식', location: '에이스 1층', memo: '안심카츠 육즙 최고', showDrop: false, expanded: true, menus: [{ name: '안심카츠', price: 10500 }, { name: '함박카츠', price: 10500 }] },
-          { id: 102, name: '할머니네 한식', category: '한식', location: '사거리 코너', memo: '계란후라이 무한리필', showDrop: false, expanded: false, menus: [{ name: '김치찌개', price: 8000 }, { name: '제육볶음', price: 9000 }] }
-        ],
+        cafeterias: [],
+        restaurants: [],
 
         form: this.getEmptyForm()
       }
@@ -434,7 +430,7 @@
         return this.restaurants.filter(r => r.category === this.selectedCategory);
       }
     },
-    mounted() {
+    async mounted() {
       setTimeout(() => { this.showIntro = false; }, 2000);
       
       const dayIdx = new Date().getDay();
@@ -444,21 +440,31 @@
         this.todayName = map[dayIdx];
       }
 
-      // PC 및 모바일 전역 Outside Click 핸들러 등록
       document.addEventListener('click', this.handleOutsideClick);
+
+      // 데이터베이스에서 데이터 불러오기
+      await this.fetchData();
     },
     beforeUnmount() {
       document.removeEventListener('click', this.handleOutsideClick);
     },
-    watch: {
-      cafeterias: { handler(val) { localStorage.setItem('cafeterias_v5', JSON.stringify(val)); }, deep: true },
-      restaurants: { handler(val) { localStorage.setItem('restaurants_v5', JSON.stringify(val)); }, deep: true }
-    },
     methods: {
-      getEmptyForm() {
-        return { id: null, type: 'cafeteria', name: '', location: '', price: null, memo: '', hasInsta: false, instaUrl: 'https://www.instagram.com/', category: '한식', menus: [{ name: '', price: null }] };
+      async fetchData() {
+        // 구내식당 목록 가져오기
+        const { data: cafData } = await supabase.from('cafeterias').select('*').order('created_at', { ascending: true });
+        if (cafData) {
+          this.cafeterias = cafData.map(c => ({ ...c, showDrop: false }));
+        }
+
+        // 일반음식점 목록 가져오기
+        const { data: resData } = await supabase.from('restaurants').select('*').order('created_at', { ascending: true });
+        if (resData) {
+          this.restaurants = resData.map(r => ({ ...r, showDrop: false, expanded: false }));
+        }
       },
-      // PC/모바일 전역 클릭 시 점 3개 메뉴 닫기
+      getEmptyForm() {
+        return { id: null, type: 'cafeteria', name: '', location: '', price: null, memo: '', has_insta: false, insta_url: 'https://www.instagram.com/', category: '한식', menus: [{ name: '', price: null }] };
+      },
       handleOutsideClick(e) {
         if (!e.target.closest('.dropdown-container')) {
           this.closeAllDropdowns();
@@ -498,42 +504,66 @@
         this.form.type = item.category ? 'restaurant' : 'cafeteria';
         this.showModal = true;
       },
-      saveStore() {
+      async saveStore() {
         if (this.form.type === 'cafeteria') {
+          const payload = {
+            name: this.form.name,
+            location: this.form.location,
+            price: this.form.price,
+            memo: this.form.memo,
+            has_insta: this.form.has_insta,
+            insta_url: this.form.insta_url
+          };
+
           if (this.isEditing) {
-            const idx = this.cafeterias.findIndex(x => x.id === this.form.id);
-            if (idx !== -1) this.cafeterias[idx] = { ...this.cafeterias[idx], ...this.form };
+            await supabase.from('cafeterias').update(payload).eq('id', this.form.id);
           } else {
-            this.cafeterias.push({ ...this.form, id: Date.now(), showDrop: false, weeklyMenus: {}, weeklyImages: {} });
+            payload.id = Date.now();
+            payload.weekly_menus = {};
+            payload.weekly_images = {};
+            await supabase.from('cafeterias').insert([payload]);
           }
         } else {
+          const payload = {
+            name: this.form.name,
+            category: this.form.category,
+            location: this.form.location,
+            memo: this.form.memo,
+            menus: this.form.menus
+          };
+
           if (this.isEditing) {
-            const idx = this.restaurants.findIndex(x => x.id === this.form.id);
-            if (idx !== -1) this.restaurants[idx] = { ...this.restaurants[idx], ...this.form };
+            await supabase.from('restaurants').update(payload).eq('id', this.form.id);
           } else {
-            this.restaurants.push({ ...this.form, id: Date.now(), showDrop: false, expanded: false });
+            payload.id = Date.now();
+            await supabase.from('restaurants').insert([payload]);
           }
         }
+        await this.fetchData();
         this.showModal = false;
       },
       openMenuTextModal(item) {
         this.closeAllDropdowns();
         this.editingCafeteria = item;
-        if (!item.weeklyMenus) item.weeklyMenus = {};
-        this.editingMenuText = item.weeklyMenus[this.selectedDay] || '';
+        if (!item.weekly_menus) item.weekly_menus = {};
+        this.editingMenuText = item.weekly_menus[this.selectedDay] || '';
         this.showMenuTextModal = true;
       },
-      saveMenuText() {
+      async saveMenuText() {
         if (this.editingCafeteria) {
-          if (!this.editingCafeteria.weeklyMenus) this.editingCafeteria.weeklyMenus = {};
-          this.editingCafeteria.weeklyMenus[this.selectedDay] = this.editingMenuText;
-          alert('식단 텍스트가 저장되었습니다.');
+          const updatedMenus = { ...this.editingCafeteria.weekly_menus, [this.selectedDay]: this.editingMenuText };
+          await supabase.from('cafeterias').update({ weekly_menus: updatedMenus }).eq('id', this.editingCafeteria.id);
+          await this.fetchData();
+          alert('식단 텍스트가 DB에 저장되었습니다.');
         }
         this.showMenuTextModal = false;
       },
-      deleteCurrentImage() {
-        if (this.editingCafeteria && this.editingCafeteria.weeklyImages) {
-          delete this.editingCafeteria.weeklyImages[this.selectedDay];
+      async deleteCurrentImage() {
+        if (this.editingCafeteria && this.editingCafeteria.weekly_images) {
+          const updatedImages = { ...this.editingCafeteria.weekly_images };
+          delete updatedImages[this.selectedDay];
+          await supabase.from('cafeterias').update({ weekly_images: updatedImages }).eq('id', this.editingCafeteria.id);
+          await this.fetchData();
           alert('이미지가 삭제되었습니다.');
         }
       },
@@ -543,7 +573,7 @@
       },
       rollDice() {
         if (this.restaurants.length === 0) {
-          alert('추천을 시작할 일반음식점 데이터가 없습니다. 식당을 먼저 추가해주세요!');
+          alert('추천을 시작할 일반음식점 데이터가 없습니다.');
           return;
         }
         const randomIndex = Math.floor(Math.random() * this.restaurants.length);
@@ -555,37 +585,40 @@
         if (!file) return;
 
         const reader = new FileReader();
-        reader.onload = (e) => {
-          if (!item.weeklyImages) item.weeklyImages = {};
-          item.weeklyImages[this.selectedDay] = e.target.result;
+        reader.onload = async (e) => {
+          const base64Img = e.target.result;
+          const updatedImages = { ...item.weekly_images, [this.selectedDay]: base64Img };
+          await supabase.from('cafeterias').update({ weekly_images: updatedImages }).eq('id', item.id);
+          await this.fetchData();
         };
         reader.readAsDataURL(file);
 
-        alert('텍스트 문자 정밀 변환(OCR)을 시작합니다. 5~10초만 기다려주세요.');
+        alert('텍스트 문자 인식(OCR)을 진행 중입니다. 잠시만 기다려주세요.');
         
         try {
           const { data: { text } } = await Tesseract.recognize(file, 'kor');
-          if (!item.weeklyMenus) item.weeklyMenus = {};
-          item.weeklyMenus[this.selectedDay] = text.trim();
+          const updatedMenus = { ...item.weekly_menus, [this.selectedDay]: text.trim() };
+          await supabase.from('cafeterias').update({ weekly_menus: updatedMenus }).eq('id', item.id);
           
           if (isInModal) {
             this.editingMenuText = text.trim();
           }
-          alert('식단표 텍스트 변환 성공!');
+          await this.fetchData();
+          alert('식단표 텍스트 변환 및 DB 저장 성공!');
         } catch (e) {
-          alert('변환 중 일시적 오류 발생. 직접 텍스트 입력을 권장합니다.');
+          alert('OCR 처리 중 오류가 발생했습니다.');
         }
       },
-      moveItem(list, idx, dir) {
-        const target = idx + dir;
-        if (target < 0 || target >= list.length) return;
-        const temp = list[idx];
-        list[idx] = list[target];
-        list[target] = temp;
+      async deleteCafeteria(id) {
+        if (confirm('이 식당을 삭제하시겠습니까?')) {
+          await supabase.from('cafeterias').delete().eq('id', id);
+          await this.fetchData();
+        }
       },
-      deleteItem(list, idx) {
-        if (confirm('이 식당을 전체 삭제하시겠습니까?')) {
-          list.splice(idx, 1);
+      async deleteRestaurant(id) {
+        if (confirm('이 식당을 삭제하시겠습니까?')) {
+          await supabase.from('restaurants').delete().eq('id', id);
+          await this.fetchData();
         }
       }
     }

@@ -167,7 +167,7 @@
                 </div>
               </div>
               
-              <div v-slot:default>
+              <div>
                 <button v-if="item.weekly_images && item.weekly_images[selectedDay]" 
                         @click="viewMenuImage(item.weekly_images[selectedDay])"
                         class="w-full py-1.5 text-center bg-gray-200 hover:bg-gray-300 text-gray-700 text-[10px] font-bold rounded-lg block shadow-sm">
@@ -463,6 +463,7 @@
             
             setTimeout(() => {
               if (!this.isAdmin) {
+                // 느낌표 유지 반영
                 alert("주말에는 일반음식점을 이용해주세요 😉");
               }
             }, 2200);
@@ -512,7 +513,8 @@
             await this.fetchData();
           } catch (err) {
             console.error(err);
-            alert('순서 저장에 실패했습니다.');
+            // 마침표 제거 및 느낌표 유지 적용
+            alert('순서 저장에 실패했습니다 ❌');
           } finally {
             this.draggedIdx = null;
             this.draggedTable = '';
@@ -580,7 +582,8 @@
                 this.currentTab = 'cafeteria';
               }
             } else {
-              alert('인증 정보가 올바르지 않습니다.');
+              // 마침표 제거 적용
+              alert('인증 정보가 올바르지 않습니다 🔐');
             }
           } else {
             this.isAdmin = false;
@@ -647,12 +650,13 @@
               this.selectedCategory = '전체';
             }
 
+            // 마침표 제거 및 느낌표 유지
             alert('성공적으로 저장되었습니다! 🎉');
             await this.fetchData();
             this.showModal = false;
           } catch (err) {
             console.error(err);
-            alert('저장 실패: ' + (err.message || '데이터베이스 오류가 발생했습니다.'));
+            alert('저장 실패: ' + (err.message || '데이터베이스 오류가 발생했습니다 ❌'));
           }
         },
         openMenuTextModal(item) {
@@ -667,12 +671,11 @@
             const updatedMenus = { ...this.editingCafeteria.weekly_menus, [this.selectedDay]: this.editingMenuText };
             await supabaseClient.from('cafeterias').update({ weekly_menus: updatedMenus }).eq('id', this.editingCafeteria.id);
             await this.fetchData();
-            alert('메뉴 텍스트가 저장되었습니다.');
+            // 요청 반영: 마침표 제거 및 느낌표 살리기
+            alert('메뉴가 수정되었습니다! ✨');
           }
           this.showMenuTextModal = false;
         },
-        
-        // [수정 포인트] 삭제 완료 시 요청하신 멘트(사진 4)로 완벽 수정 완료
         async deleteCurrentImage() {
           if (this.editingCafeteria && this.editingCafeteria.weekly_images) {
             const updatedImages = { ...this.editingCafeteria.weekly_images };
@@ -691,15 +694,14 @@
             this.editingMenuText = ''; 
 
             await this.fetchData();
-            alert('등록된 메뉴 이미지와 텍스트가 삭제되었습니다.');
+            // 요청 반영: 마침표 제거 및 느낌표 살리기
+            alert('등록된 이미지와 텍스트가 삭제되었습니다! 🗑️');
           }
         },
         viewMenuImage(imgBase64) {
           this.currentViewImage = imgBase64;
           this.showImageModal = true;
         },
-        
-        // [수정 포인트] 사진 3 관련 분석 대기 알럿 제거 및 사진 2 관련 완료 알럿 문구 간소화 적용 완료
         async handleImageUpload(event, item, isInModal = false) {
           const file = event.target.files[0];
           if (!file) return;
@@ -720,24 +722,26 @@
             
             await this.fetchData();
             
-            // 사진 2 피드백 반영: 가독성이 좋은 간결한 단일 안내문구로 전면 교체
-            alert("잘못 인식된 메뉴는 직접 텍스트 수정해주세요");
+            // 요청 반영: 마침표 제거 및 느낌표 살리기
+            alert("잘못 인식된 메뉴는 직접 텍스트 수정해주세요! ✍️");
             
             const updatedItem = this.cafeterias.find(c => c.id === item.id);
             this.openMenuTextModal(updatedItem || item);
 
           } catch (e) {
-            alert('OCR 처리 중 오류가 발생했습니다.');
+            alert('문자 인식 중 오류가 발생했습니다 ❌');
           }
         },
         async deleteCafeteria(id) {
-          if (confirm('이 식당을 삭제하시겠습니까?')) {
+          // 물음표 유지 적용
+          if (confirm('이 식당을 삭제하시겠습니까? 🗑️')) {
             await supabaseClient.from('cafeterias').delete().eq('id', id);
             await this.fetchData();
           }
         },
         async deleteRestaurant(id) {
-          if (confirm('이 식당을 삭제하시겠습니까?')) {
+          // 물음표 유지 적용
+          if (confirm('이 식당을 삭제하시겠습니까? 🗑️')) {
             await supabaseClient.from('restaurants').delete().eq('id', id);
             await this.fetchData();
           }

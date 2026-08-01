@@ -38,9 +38,7 @@
 
   <div v-if="showIntro" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-sand text-hunter">
     <div class="text-center p-6">
-      <div class="w-32 h-32 mx-auto mb-4 bg-white rounded-full flex items-center justify-center shadow-lg text-5xl">
-        🍱
-      </div>
+      <div class="text-6xl mb-4">🍱</div>
       <h1 class="text-2xl font-bold mb-2">오늘 점심 뭐 먹지?</h1>
       <p class="text-sm opacity-80">실시간 공유 DB 연결 완료!</p>
     </div>
@@ -349,9 +347,9 @@
     </div>
   </div>
 
-  <div v-if="showImageModal && currentViewImage" class="fixed inset-0 bg-black/70 z-50 flex flex-col items-center justify-center p-4" @click="closeImageModal">
+  <div v-if="showImageModal" class="fixed inset-0 bg-black/70 z-50 flex flex-col items-center justify-center p-4" @click="showImageModal = false">
     <div class="max-w-full max-h-[80vh] relative bg-white p-2 rounded-2xl" @click.stop>
-      <button @click="closeImageModal" class="absolute -top-10 right-0 text-white text-3xl font-bold">&times;</button>
+      <button @click="showImageModal = false" class="absolute -top-10 right-0 text-white text-3xl font-bold">&times;</button>
       <img :src="currentViewImage" class="max-w-full max-h-[75vh] object-contain rounded-xl">
     </div>
   </div>
@@ -402,6 +400,7 @@
       }
     },
     async mounted() {
+      // 2초 뒤 인트로 제거
       setTimeout(() => { this.showIntro = false; }, 2000);
       
       const dayIdx = new Date().getDay();
@@ -535,13 +534,8 @@
         }
       },
       viewMenuImage(imgBase64) {
-        if (!imgBase64) return;
         this.currentViewImage = imgBase64;
         this.showImageModal = true;
-      },
-      closeImageModal() {
-        this.showImageModal = false;
-        this.currentViewImage = '';
       },
       async handleImageUpload(event, item, isInModal = false) {
         const file = event.target.files[0];
@@ -588,4 +582,4 @@
   }).mount('#app');
 </script>
 </body>
-</html>ㅠ
+</html>

@@ -385,9 +385,9 @@
 </div>
 
 <script>
-  // Supabase 클라이언트 초기화
-  const SUPABASE_URL = 'https://ocjnfrjmgmwgatlbfkqx.supabase.co/rest/v1/'; // <--- 여기에 URL 입력
-  const SUPABASE_KEY = 'sb_publishable_G2cOvjwpxVtc5vUWY0QbdQ_npNiElOi'; // <--- 여기에 KEY 입력
+  // Supabase 클라이언트 초기화 (작성자님의 키값 적용 완료)
+  const SUPABASE_URL = 'https://ocjnfrjmgmwgatlbfkqx.supabase.co'; 
+  const SUPABASE_KEY = 'sb_publishable_G2cOvjwpxVtc5vUWY0QbdQ_npNiElOi'; // 👈 [중요] 여기에 아까 복사한 Publishable key만 지워지지 않았다면 그대로 두거나 다시 넣어주세요!
   const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
   const { createApp } = Vue;
@@ -413,7 +413,7 @@
         showImageModal: false,
         currentViewImage: '',
 
-        showDiceModal: false,
+        showDiceModal: false, // 초기값 확실하게 false 설정
         pickedStore: null,
 
         cafeterias: [],
@@ -434,15 +434,14 @@
       setTimeout(() => { this.showIntro = false; }, 2000);
       
       const dayIdx = new Date().getDay();
-      const map = ['', '월', '화', '수', '목', '금', ''];
+      const map = ['', '월', '화', 'su', '목', '금', ''];
+      const correctMap = ['', '월', '화', '수', '목', '금', ''];
       if (dayIdx >= 1 && dayIdx <= 5) {
-        this.selectedDay = map[dayIdx];
-        this.todayName = map[dayIdx];
+        this.selectedDay = correctMap[dayIdx];
+        this.todayName = correctMap[dayIdx];
       }
 
       document.addEventListener('click', this.handleOutsideClick);
-
-      // 데이터베이스에서 데이터 불러오기
       await this.fetchData();
     },
     beforeUnmount() {
@@ -450,13 +449,11 @@
     },
     methods: {
       async fetchData() {
-        // 구내식당 목록 가져오기
         const { data: cafData } = await supabase.from('cafeterias').select('*').order('created_at', { ascending: true });
         if (cafData) {
           this.cafeterias = cafData.map(c => ({ ...c, showDrop: false }));
         }
 
-        // 일반음식점 목록 가져오기
         const { data: resData } = await supabase.from('restaurants').select('*').order('created_at', { ascending: true });
         if (resData) {
           this.restaurants = resData.map(r => ({ ...r, showDrop: false, expanded: false }));
@@ -554,7 +551,7 @@
           const updatedMenus = { ...this.editingCafeteria.weekly_menus, [this.selectedDay]: this.editingMenuText };
           await supabase.from('cafeterias').update({ weekly_menus: updatedMenus }).eq('id', this.editingCafeteria.id);
           await this.fetchData();
-          alert('식단 텍스트가 DB에 저장되었습니다.');
+          alert('식단 텍스트가 저장되었습니다.');
         }
         this.showMenuTextModal = false;
       },
@@ -573,7 +570,8 @@
       },
       rollDice() {
         if (this.restaurants.length === 0) {
-          alert('추천을 시작할 일반음식점 데이터가 없습니다.');
+          alert('추천할 일반음식점 데이터가 없습니다. 먼저 식당을 등록해주세요!');
+          this.showDiceModal = false;
           return;
         }
         const randomIndex = Math.floor(Math.random() * this.restaurants.length);
@@ -604,7 +602,7 @@
             this.editingMenuText = text.trim();
           }
           await this.fetchData();
-          alert('식단표 텍스트 변환 및 DB 저장 성공!');
+          alert('식단표 변환 및 저장 성공!');
         } catch (e) {
           alert('OCR 처리 중 오류가 발생했습니다.');
         }

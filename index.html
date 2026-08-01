@@ -30,6 +30,8 @@
     .card-shadow { box-shadow: 0 4px 12px rgba(62, 95, 68, 0.08); }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    /* 드래그 상태 스타일 효과 */
+    .dragging { opacity: 0.5; border: 2px dashed #E07A5F !important; }
   </style>
 </head>
 <body>
@@ -104,10 +106,18 @@
     
     <div v-if="currentTab === 'cafeteria'">
       <div v-if="cafeterias.length > 0" class="grid grid-cols-2 gap-3">
-        <div v-for="(item, idx) in cafeterias" :key="item.id" class="bg-white rounded-2xl p-3 border border-gray-100 card-shadow flex flex-col justify-between relative">
+        <div v-for="(item, idx) in cafeterias" :key="item.id" 
+             :draggable="isAdmin"
+             @dragstart="onDragStart($event, idx, 'cafeterias')"
+             @dragover.prevent
+             @drop="onDrop($event, idx, 'cafeterias')"
+             :class="{'border-2 border-dashed border-terracotta/60': isAdmin}"
+             class="bg-white rounded-2xl p-3 border border-gray-100 card-shadow flex flex-col justify-between relative transition-all">
           
           <div>
             <div class="flex items-center justify-between gap-1 mb-1">
+              <span v-if="isAdmin" class="text-xs text-gray-400 cursor-grab shrink-0 font-bold select-none mr-0.5">⋮⋮</span>
+              
               <h3 class="font-bold text-gray-800 text-sm truncate flex-1 min-w-0" :title="item.name">
                 {{ item.name }}
               </h3>
@@ -116,20 +126,15 @@
                 {{ item.price ? item.price.toLocaleString() + '원' : '' }}
               </span>
 
-              <div class="relative shrink-0 dropdown-container flex items-center gap-1">
-                <div v-if="isAdmin" class="flex flex-col text-[10px] leading-tight shrink-0 select-none">
-                  <button @click.stop="moveOrder('cafeterias', idx, -1)" class="hover:text-terracotta px-0.5">🔼</button>
-                  <button @click.stop="moveOrder('cafeterias', idx, 1)" class="hover:text-terracotta px-0.5">🔽</button>
-                </div>
-
+              <div class="relative shrink-0 dropdown-container flex items-center">
                 <button @click.stop="toggleDropdown(item)" class="text-gray-400 hover:text-gray-600 p-1">
                   <i class="fa-solid fa-ellipsis-vertical"></i>
                 </button>
-                <div v-if="item.showDrop" class="absolute right-0 mt-7 w-24 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-1 text-xs font-medium text-left" @click.stop>
+                <div v-if="item.showDrop" class="absolute right-0 mt-20 w-24 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-1 text-xs font-medium text-gray-600 text-left" @click.stop>
                   <button @click="openEditModal(item)" class="w-full px-2.5 py-2 hover:bg-gray-50 text-gray-700 block">
-                    ✏️ 정보 수정
+                    ✏️ 식당 수정
                   </button>
-                  <button @click="openMenuTextModal(item)" class="w-full px-2.5 py-2 hover:bg-gray-50 text-terracotta font-bold border-t border-gray-50 block">
+                  <button @click="openMenuTextModal(item)" class="w-full px-2.5 py-2 hover:bg-gray-50 text-gray-700 block border-t border-gray-50">
                     📝 메뉴 수정
                   </button>
                 </div>
@@ -153,17 +158,19 @@
               </a>
             </template>
             <template v-else>
-              <div v-if="(!item.weekly_menus || !item.weekly_menus[selectedDay]) && (!item.weekly_images || !item.weekly_images[selectedDay])">
-                <div class="text-[11px] text-gray-400 py-3 text-center bg-gray-50/50 rounded-xl mb-2">
-                  등록된 메뉴 없음
+              <div v-if="!item.weekly_menus || !item.weekly_menus[selectedDay]">
+                <div v-if="!item.weekly_images || !item.weekly_images[selectedDay]">
+                  <div class="text-[11px] text-gray-400 py-3 text-center bg-gray-50/50 rounded-xl mb-2">
+                    등록된 메뉴 없음
+                  </div>
+                  <label class="cursor-pointer block w-full py-1.5 bg-sand text-hunter font-bold text-[11px] rounded-lg shadow-sm hover:opacity-90 text-center">
+                    <i class="fa-solid fa-camera"></i> 사진 등록 / OCR
+                    <input type="file" accept="image/*" class="hidden" @change="handleImageUpload($event, item, false)">
+                  </label>
                 </div>
-                <label class="cursor-pointer block w-full py-1.5 bg-sand text-hunter font-bold text-[11px] rounded-lg shadow-sm hover:opacity-90 text-center">
-                  <i class="fa-solid fa-camera"></i> 사진 등록 / OCR
-                  <input type="file" accept="image/*" class="hidden" @change="handleImageUpload($event, item, false)">
-                </label>
               </div>
               
-              <div v-else>
+              <div v-slot:default>
                 <button v-if="item.weekly_images && item.weekly_images[selectedDay]" 
                         @click="viewMenuImage(item.weekly_images[selectedDay])"
                         class="w-full py-1.5 text-center bg-gray-200 hover:bg-gray-300 text-gray-700 text-[10px] font-bold rounded-lg block shadow-sm">
@@ -182,15 +189,16 @@
         등록된 구내식당이 없습니다. 오른쪽 위의 '+ 식당 추가'로 등록해 보세요!
       </div>
 
-      <div class="mt-4 space-y-2">
-        <div class="bg-orange-50 border border-orange-200 rounded-xl p-3 flex items-center gap-2 text-orange-800 shadow-sm">
-          <span class="text-base">💡</span>
+      <div class="mt-4 bg-orange-50 border border-orange-200 rounded-xl p-3.5 space-y-2 text-orange-800 shadow-sm">
+        <div class="flex items-start gap-2">
+          <span class="text-base leading-none">💡</span>
           <p class="text-[11px] font-medium leading-snug">
             주요 인스타 연동 구내식당은 <strong>오전 11시 전후</strong>로 당일 메뉴가 업데이트됩니다!
           </p>
         </div>
-        <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 flex items-center gap-2 text-blue-800 shadow-sm">
-          <span class="text-base">🔄</span>
+        <div class="border-t border-orange-200/60 my-1"></div>
+        <div class="flex items-start gap-2">
+          <span class="text-base leading-none">🔄</span>
           <p class="text-[11px] font-medium leading-snug">
             구내식당 메뉴 리스트는 <strong>매주 일요일 밤 12시(23:59)</strong>에 자동으로 리셋됩니다.
           </p>
@@ -199,19 +207,28 @@
     </div>
 
     <div v-if="currentTab === 'restaurant'" class="flex flex-col gap-3">
-      <div v-for="(item, idx) in filteredRestaurants" :key="item.id" class="bg-white rounded-2xl p-4 border border-gray-100 card-shadow">
+      <div v-for="(item, idx) in filteredRestaurants" :key="item.id" 
+           :draggable="isAdmin"
+           @dragstart="onDragStart($event, idx, 'restaurants')"
+           @dragover.prevent
+           @drop="onDrop($event, idx, 'restaurants')"
+           :class="{'border-2 border-dashed border-terracotta/60': isAdmin}"
+           class="bg-white rounded-2xl p-4 border border-gray-100 card-shadow transition-all">
         <div class="flex justify-between items-start gap-2">
           
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center gap-2 flex-wrap">
-              <h3 class="font-bold text-gray-800 text-base truncate">{{ item.name }}</h3>
-              <span class="px-2 py-0.5 text-[10px] bg-emerald-100 text-emerald-800 rounded-md font-bold shrink-0">
-                {{ item.category }}
-              </span>
+          <div class="flex-1 min-w-0 flex items-center gap-1.5">
+            <span v-if="isAdmin" class="text-sm text-gray-400 cursor-grab shrink-0 font-bold select-none mr-1">⋮⋮</span>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="font-bold text-gray-800 text-base truncate">{{ item.name }}</h3>
+                <span class="px-2 py-0.5 text-[10px] bg-emerald-100 text-emerald-800 rounded-md font-bold shrink-0">
+                  {{ item.category }}
+                </span>
+              </div>
+              <p v-if="item.memo" class="text-[11px] text-emerald-700 font-medium mt-1 truncate">
+                💬 {{ item.memo }}
+              </p>
             </div>
-            <p v-if="item.memo" class="text-[11px] text-emerald-700 font-medium mt-1 truncate">
-              💬 {{ item.memo }}
-            </p>
           </div>
           
           <div class="flex items-center gap-2 shrink-0">
@@ -219,18 +236,13 @@
               📍 {{ item.location }}
             </span>
 
-            <div class="relative dropdown-container flex items-center gap-1">
-              <div v-if="isAdmin" class="flex flex-col text-[10px] leading-tight shrink-0 select-none">
-                <button @click.stop="moveOrder('restaurants', idx, -1)" class="hover:text-terracotta px-0.5">🔼</button>
-                <button @click.stop="moveOrder('restaurants', idx, 1)" class="hover:text-terracotta px-0.5">🔽</button>
-              </div>
-
+            <div class="relative dropdown-container">
               <button @click.stop="toggleDropdown(item)" class="text-gray-400 hover:text-gray-600 p-1">
                 <i class="fa-solid fa-ellipsis-vertical"></i>
               </button>
-              <div v-if="item.showDrop" class="absolute right-0 mt-7 w-24 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-1 text-xs font-medium text-left" @click.stop>
+              <div v-if="item.showDrop" class="absolute right-0 mt-1 w-24 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-1 text-xs font-medium text-left" @click.stop>
                 <button @click="openEditModal(item)" class="w-full px-2.5 py-2 hover:bg-gray-50 text-gray-700 block">
-                  ✏️ 정보 수정
+                  ✏️ 식당 수정
                 </button>
               </div>
             </div>
@@ -412,6 +424,10 @@
           cafeterias: [],
           restaurants: [],
 
+          // 드래그앤드롭 인덱스 보관용 변수
+          draggedIdx: null,
+          draggedTable: '',
+
           form: this.getEmptyForm()
         }
       },
@@ -466,7 +482,6 @@
           this.currentTab = tabName;
         },
         async fetchData() {
-          // 순서 조절을 위해 created_at(생성 시간) 기준 오름차순으로 완벽 정렬
           const { data: cafData } = await supabaseClient.from('cafeterias').select('*').order('created_at', { ascending: true });
           if (cafData) {
             this.cafeterias = cafData.map(c => ({ ...c, showDrop: false }));
@@ -477,36 +492,43 @@
             this.restaurants = resData.map(r => ({ ...r, showDrop: false, expanded: false }));
           }
         },
-        // [핵심 추가] 관리자 전용 위/아래 식당 순서 이동 함수
-        async moveOrder(tableName, index, direction) {
+
+        // [드래그 앤 드롭 구현 핵심 함수]
+        onDragStart(event, idx, tableName) {
+          this.draggedIdx = idx;
+          this.draggedTable = tableName;
+        },
+        async onDrop(event, targetIdx, tableName) {
+          if (this.draggedTable !== tableName || this.draggedIdx === null || this.draggedIdx === targetIdx) return;
+
           const list = tableName === 'cafeterias' ? this.cafeterias : this.restaurants;
-          const targetIndex = index + direction;
           
-          // 범위를 벗어나면 작동 중지
-          if (targetIndex < 0 || targetIndex >= list.length) return;
+          // 배열 원소 교체
+          const draggedItem = list[this.draggedIdx];
+          list.splice(this.draggedIdx, 1);
+          list.splice(targetIdx, 0, draggedItem);
 
-          // 프론트엔드 리스트에서 두 객체 위치 교환
-          const temp = list[index];
-          list[index] = list[targetIndex];
-          list[targetIndex] = temp;
-
-          // 두 데이터의 가상 생성 타임스탬프 값을 서로 바꾸어 DB에 업데이트 저장
-          const firstStore = list[index];
-          const secondStore = list[targetIndex];
-
-          const tempTime = firstStore.created_at;
-          firstStore.created_at = secondStore.created_at;
-          secondStore.created_at = tempTime;
-
+          // 데이터베이스에 바뀐 레이아웃 타임스탬프 순서 일괄 갱신 처리
           try {
-            await supabaseClient.from(tableName).update({ created_at: firstStore.created_at }).eq('id', firstStore.id);
-            await supabaseClient.from(tableName).update({ created_at: secondStore.created_at }).eq('id', secondStore.id);
-            // 깔끔하게 재로딩
+            for (let i = 0; i < list.length; i++) {
+              // 최초 생성일을 1초 간격 기준으로 재정렬 분배하여 created_at 저장
+              const baseTime = new Date(2026, 0, 1).getTime() + (i * 5000);
+              const newIsoString = new Date(baseTime).toISOString();
+              
+              await supabaseClient.from(tableName)
+                .update({ created_at: newIsoString })
+                .eq('id', list[i].id);
+            }
             await this.fetchData();
-          } catch (e) {
-            alert('순서 정렬 저장에 실패했습니다.');
+          } catch (err) {
+            console.error(err);
+            alert('순서 저장에 실패했습니다.');
+          } finally {
+            this.draggedIdx = null;
+            this.draggedTable = '';
           }
         },
+
         async checkAndResetWeeklyMenus() {
           if (this.cafeterias.length === 0) return;
 
@@ -660,20 +682,36 @@
           }
           this.showMenuTextModal = false;
         },
+        
+        // [수정 포인트] 이미지 삭제 버튼 클릭 시 내부 모달 데이터 및 하단 텍스트 필드까지 동시 리셋 연동 구현
         async deleteCurrentImage() {
           if (this.editingCafeteria && this.editingCafeteria.weekly_images) {
+            // 1. DB 이미지 데이터 제거 연동
             const updatedImages = { ...this.editingCafeteria.weekly_images };
             delete updatedImages[this.selectedDay];
-            await supabaseClient.from('cafeterias').update({ weekly_images: updatedImages }).eq('id', this.editingCafeteria.id);
+            
+            // 2. DB 텍스트 데이터 동시 제거 연동
+            const updatedMenus = { ...this.editingCafeteria.weekly_menus };
+            delete updatedMenus[this.selectedDay];
+
+            await supabaseClient.from('cafeterias').update({ 
+              weekly_images: updatedImages,
+              weekly_menus: updatedMenus 
+            }).eq('id', this.editingCafeteria.id);
+            
+            // 3. 현재 띄워져있는 모달창의 프론트 데이터 실시간 지우기
+            this.editingCafeteria.weekly_images[this.selectedDay] = null;
+            this.editingCafeteria.weekly_menus[this.selectedDay] = '';
+            this.editingMenuText = ''; 
+
             await this.fetchData();
-            alert('이미지가 삭제되었습니다.');
+            alert('이미지와 등록된 식단 텍스트 내용이 함께 삭제되었습니다.');
           }
         },
         viewMenuImage(imgBase64) {
           this.currentViewImage = imgBase64;
           this.showImageModal = true;
         },
-        // 네 번째 사진 피드백: 사진 등록 시 예쁜 알럿 팝업 후 수정 창 자동 연동
         async handleImageUpload(event, item, isInModal = false) {
           const file = event.target.files[0];
           if (!file) return;
@@ -696,10 +734,8 @@
             
             await this.fetchData();
             
-            // 이미지 분석 성공 후 맞춤형 얼럿 창 알림
             alert("문자 인식이 잘 되었는지 확인해주세요!\n잘못 인식된 메뉴는 직접 수정해주세요! 😉");
             
-            // 알럿창을 닫으면 즉시 "메뉴 수정하기" 모달을 자동으로 즉시 호출
             const updatedItem = this.cafeterias.find(c => c.id === item.id);
             this.openMenuTextModal(updatedItem || item);
 

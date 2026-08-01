@@ -362,7 +362,6 @@
 <script>
   window.addEventListener('DOMContentLoaded', () => {
     const SUPABASE_URL = 'https://ocjnfrjmgmwgatlbfkqx.supabase.co'; 
-    // 제공해 주신 Publishable API Key 적용 완료
     const SUPABASE_KEY = 'sb_publishable_G2cOvjwpxVtc5vUWY0QbdQ_npNiElOi'; 
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
@@ -489,6 +488,8 @@
                 const { error } = await supabaseClient.from('cafeterias').update(payload).eq('id', this.form.id);
                 if (error) throw error;
               } else {
+                // 고유 ID 직접 부여하여 null constraint 오류 해결
+                payload.id = Math.floor(Date.now() / 1000);
                 payload.weekly_menus = {};
                 payload.weekly_images = {};
                 const { error } = await supabaseClient.from('cafeterias').insert([payload]);
@@ -508,6 +509,8 @@
                 const { error } = await supabaseClient.from('restaurants').update(payload).eq('id', this.form.id);
                 if (error) throw error;
               } else {
+                // 고유 ID 직접 부여
+                payload.id = Math.floor(Date.now() / 1000);
                 const { error } = await supabaseClient.from('restaurants').insert([payload]);
                 if (error) throw error;
               }

@@ -357,229 +357,230 @@
 </div>
 
 <script>
-  // Supabase 클라이언트 초기화
-  const SUPABASE_URL = 'https://ocjnfrjmgmwgatlbfkqx.supabase.co'; 
-  const SUPABASE_KEY = 'sb_publishable_G2c0vjwpxVtc5vUWY0QbdQ_npNiE'; 
-  const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  window.addEventListener('DOMContentLoaded', () => {
+    // Supabase 클라이언트 안전 생성
+    const SUPABASE_URL = 'https://ocjnfrjmgmwgatlbfkqx.supabase.co'; 
+    const SUPABASE_KEY = 'sb_publishable_G2c0vjwpxVtc5vUWY0QbdQ_npNiE'; 
+    const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-  const { createApp } = Vue;
+    const { createApp } = Vue;
 
-  createApp({
-    data() {
-      return {
-        showIntro: true,
-        currentTab: 'cafeteria',
-        selectedDay: '월',
-        selectedCategory: '전체',
-        todayName: '월',
-        days: ['월', '화', '수', '목', '금'],
-        categories: ['한식', '중식', '일식', '양식', '분식', '기타'],
-        isAdmin: false,
-        showModal: false,
-        isEditing: false,
-        
-        showMenuTextModal: false,
-        editingCafeteria: null,
-        editingMenuText: '',
-
-        showImageModal: false,
-        currentViewImage: '',
-
-        cafeterias: [],
-        restaurants: [],
-
-        form: this.getEmptyForm()
-      }
-    },
-    computed: {
-      filteredRestaurants() {
-        if (this.selectedCategory === '전체') {
-          return this.restaurants;
-        }
-        return this.restaurants.filter(r => r.category === this.selectedCategory);
-      }
-    },
-    async mounted() {
-      // 2초 뒤 인트로 제거
-      setTimeout(() => { this.showIntro = false; }, 2000);
-      
-      const dayIdx = new Date().getDay();
-      const correctMap = ['', '월', '화', '수', '목', '금', ''];
-      if (dayIdx >= 1 && dayIdx <= 5) {
-        this.selectedDay = correctMap[dayIdx];
-        this.todayName = correctMap[dayIdx];
-      }
-
-      document.addEventListener('click', this.handleOutsideClick);
-      await this.fetchData();
-    },
-    beforeUnmount() {
-      document.removeEventListener('click', this.handleOutsideClick);
-    },
-    methods: {
-      async fetchData() {
-        const { data: cafData } = await supabase.from('cafeterias').select('*').order('created_at', { ascending: true });
-        if (cafData) {
-          this.cafeterias = cafData.map(c => ({ ...c, showDrop: false }));
-        }
-
-        const { data: resData } = await supabase.from('restaurants').select('*').order('created_at', { ascending: true });
-        if (resData) {
-          this.restaurants = resData.map(r => ({ ...r, showDrop: false, expanded: false }));
-        }
-      },
-      getEmptyForm() {
-        return { id: null, type: 'cafeteria', name: '', location: '', price: null, memo: '', has_insta: false, insta_url: 'https://www.instagram.com/', category: '한식', menus: [{ name: '', price: null }] };
-      },
-      handleOutsideClick(e) {
-        if (!e.target.closest('.dropdown-container')) {
-          this.closeAllDropdowns();
-        }
-      },
-      closeAllDropdowns() {
-        this.cafeterias.forEach(x => x.showDrop = false);
-        this.restaurants.forEach(x => x.showDrop = false);
-      },
-      toggleDropdown(item) {
-        const currentStatus = item.showDrop;
-        this.closeAllDropdowns();
-        item.showDrop = !currentStatus;
-      },
-      toggleAdmin() {
-        if (!this.isAdmin) {
-          const id = prompt('관리자 ID를 입력하세요:');
-          if (id === 'lunch') {
-            this.isAdmin = true;
-          } else {
-            alert('인증 정보가 올바르지 않습니다.');
-          }
-        } else {
-          this.isAdmin = false;
-        }
-      },
-      openAddModal() {
-        this.isEditing = false;
-        this.form = this.getEmptyForm();
-        this.form.type = this.currentTab;
-        this.showModal = true;
-      },
-      openEditModal(item) {
-        this.closeAllDropdowns();
-        this.isEditing = true;
-        this.form = JSON.parse(JSON.stringify(item));
-        this.form.type = item.category ? 'restaurant' : 'cafeteria';
-        this.showModal = true;
-      },
-      async saveStore() {
-        if (this.form.type === 'cafeteria') {
-          const payload = {
-            name: this.form.name,
-            location: this.form.location,
-            price: this.form.price,
-            memo: this.form.memo,
-            has_insta: this.form.has_insta,
-            insta_url: this.form.insta_url
-          };
-
-          if (this.isEditing) {
-            await supabase.from('cafeterias').update(payload).eq('id', this.form.id);
-          } else {
-            payload.id = Date.now();
-            payload.weekly_menus = {};
-            payload.weekly_images = {};
-            await supabase.from('cafeterias').insert([payload]);
-          }
-        } else {
-          const payload = {
-            name: this.form.name,
-            category: this.form.category,
-            location: this.form.location,
-            memo: this.form.memo,
-            menus: this.form.menus
-          };
-
-          if (this.isEditing) {
-            await supabase.from('restaurants').update(payload).eq('id', this.form.id);
-          } else {
-            payload.id = Date.now();
-            await supabase.from('restaurants').insert([payload]);
-          }
-        }
-        await this.fetchData();
-        this.showModal = false;
-      },
-      openMenuTextModal(item) {
-        this.closeAllDropdowns();
-        this.editingCafeteria = item;
-        if (!item.weekly_menus) item.weekly_menus = {};
-        this.editingMenuText = item.weekly_menus[this.selectedDay] || '';
-        this.showMenuTextModal = true;
-      },
-      async saveMenuText() {
-        if (this.editingCafeteria) {
-          const updatedMenus = { ...this.editingCafeteria.weekly_menus, [this.selectedDay]: this.editingMenuText };
-          await supabase.from('cafeterias').update({ weekly_menus: updatedMenus }).eq('id', this.editingCafeteria.id);
-          await this.fetchData();
-          alert('식단 텍스트가 저장되었습니다.');
-        }
-        this.showMenuTextModal = false;
-      },
-      async deleteCurrentImage() {
-        if (this.editingCafeteria && this.editingCafeteria.weekly_images) {
-          const updatedImages = { ...this.editingCafeteria.weekly_images };
-          delete updatedImages[this.selectedDay];
-          await supabase.from('cafeterias').update({ weekly_images: updatedImages }).eq('id', this.editingCafeteria.id);
-          await this.fetchData();
-          alert('이미지가 삭제되었습니다.');
-        }
-      },
-      viewMenuImage(imgBase64) {
-        this.currentViewImage = imgBase64;
-        this.showImageModal = true;
-      },
-      async handleImageUpload(event, item, isInModal = false) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-          const base64Img = e.target.result;
-          const updatedImages = { ...item.weekly_images, [this.selectedDay]: base64Img };
-          await supabase.from('cafeterias').update({ weekly_images: updatedImages }).eq('id', item.id);
-          await this.fetchData();
-        };
-        reader.readAsDataURL(file);
-
-        alert('텍스트 문자 인식(OCR)을 진행 중입니다. 잠시만 기다려주세요.');
-        
-        try {
-          const { data: { text } } = await Tesseract.recognize(file, 'kor');
-          const updatedMenus = { ...item.weekly_menus, [this.selectedDay]: text.trim() };
-          await supabase.from('cafeterias').update({ weekly_menus: updatedMenus }).eq('id', item.id);
+    createApp({
+      data() {
+        return {
+          showIntro: true,
+          currentTab: 'cafeteria',
+          selectedDay: '월',
+          selectedCategory: '전체',
+          todayName: '월',
+          days: ['월', '화', '수', '목', '금'],
+          categories: ['한식', '중식', '일식', '양식', '분식', '기타'],
+          isAdmin: false,
+          showModal: false,
+          isEditing: false,
           
-          if (isInModal) {
-            this.editingMenuText = text.trim();
+          showMenuTextModal: false,
+          editingCafeteria: null,
+          editingMenuText: '',
+
+          showImageModal: false,
+          currentViewImage: '',
+
+          cafeterias: [],
+          restaurants: [],
+
+          form: this.getEmptyForm()
+        }
+      },
+      computed: {
+        filteredRestaurants() {
+          if (this.selectedCategory === '전체') {
+            return this.restaurants;
+          }
+          return this.restaurants.filter(r => r.category === this.selectedCategory);
+        }
+      },
+      async mounted() {
+        setTimeout(() => { this.showIntro = false; }, 2000);
+        
+        const dayIdx = new Date().getDay();
+        const correctMap = ['', '월', '화', '수', '목', '금', ''];
+        if (dayIdx >= 1 && dayIdx <= 5) {
+          this.selectedDay = correctMap[dayIdx];
+          this.todayName = correctMap[dayIdx];
+        }
+
+        document.addEventListener('click', this.handleOutsideClick);
+        await this.fetchData();
+      },
+      beforeUnmount() {
+        document.removeEventListener('click', this.handleOutsideClick);
+      },
+      methods: {
+        async fetchData() {
+          const { data: cafData } = await supabaseClient.from('cafeterias').select('*').order('created_at', { ascending: true });
+          if (cafData) {
+            this.cafeterias = cafData.map(c => ({ ...c, showDrop: false }));
+          }
+
+          const { data: resData } = await supabaseClient.from('restaurants').select('*').order('created_at', { ascending: true });
+          if (resData) {
+            this.restaurants = resData.map(r => ({ ...r, showDrop: false, expanded: false }));
+          }
+        },
+        getEmptyForm() {
+          return { id: null, type: 'cafeteria', name: '', location: '', price: null, memo: '', has_insta: false, insta_url: 'https://www.instagram.com/', category: '한식', menus: [{ name: '', price: null }] };
+        },
+        handleOutsideClick(e) {
+          if (!e.target.closest('.dropdown-container')) {
+            this.closeAllDropdowns();
+          }
+        },
+        closeAllDropdowns() {
+          this.cafeterias.forEach(x => x.showDrop = false);
+          this.restaurants.forEach(x => x.showDrop = false);
+        },
+        toggleDropdown(item) {
+          const currentStatus = item.showDrop;
+          this.closeAllDropdowns();
+          item.showDrop = !currentStatus;
+        },
+        toggleAdmin() {
+          if (!this.isAdmin) {
+            const id = prompt('관리자 ID를 입력하세요:');
+            if (id === 'lunch') {
+              this.isAdmin = true;
+            } else {
+              alert('인증 정보가 올바르지 않습니다.');
+            }
+          } else {
+            this.isAdmin = false;
+          }
+        },
+        openAddModal() {
+          this.isEditing = false;
+          this.form = this.getEmptyForm();
+          this.form.type = this.currentTab;
+          this.showModal = true;
+        },
+        openEditModal(item) {
+          this.closeAllDropdowns();
+          this.isEditing = true;
+          this.form = JSON.parse(JSON.stringify(item));
+          this.form.type = item.category ? 'restaurant' : 'cafeteria';
+          this.showModal = true;
+        },
+        async saveStore() {
+          if (this.form.type === 'cafeteria') {
+            const payload = {
+              name: this.form.name,
+              location: this.form.location,
+              price: this.form.price,
+              memo: this.form.memo,
+              has_insta: this.form.has_insta,
+              insta_url: this.form.insta_url
+            };
+
+            if (this.isEditing) {
+              await supabaseClient.from('cafeterias').update(payload).eq('id', this.form.id);
+            } else {
+              payload.id = Date.now();
+              payload.weekly_menus = {};
+              payload.weekly_images = {};
+              await supabaseClient.from('cafeterias').insert([payload]);
+            }
+          } else {
+            const payload = {
+              name: this.form.name,
+              category: this.form.category,
+              location: this.form.location,
+              memo: this.form.memo,
+              menus: this.form.menus
+            };
+
+            if (this.isEditing) {
+              await supabaseClient.from('restaurants').update(payload).eq('id', this.form.id);
+            } else {
+              payload.id = Date.now();
+              await supabaseClient.from('restaurants').insert([payload]);
+            }
           }
           await this.fetchData();
-          alert('식단표 변환 및 저장 성공!');
-        } catch (e) {
-          alert('OCR 처리 중 오류가 발생했습니다.');
-        }
-      },
-      async deleteCafeteria(id) {
-        if (confirm('이 식당을 삭제하시겠습니까?')) {
-          await supabase.from('cafeterias').delete().eq('id', id);
-          await this.fetchData();
-        }
-      },
-      async deleteRestaurant(id) {
-        if (confirm('이 식당을 삭제하시겠습니까?')) {
-          await supabase.from('restaurants').delete().eq('id', id);
-          await this.fetchData();
+          this.showModal = false;
+        },
+        openMenuTextModal(item) {
+          this.closeAllDropdowns();
+          this.editingCafeteria = item;
+          if (!item.weekly_menus) item.weekly_menus = {};
+          this.editingMenuText = item.weekly_menus[this.selectedDay] || '';
+          this.showMenuTextModal = true;
+        },
+        async saveMenuText() {
+          if (this.editingCafeteria) {
+            const updatedMenus = { ...this.editingCafeteria.weekly_menus, [this.selectedDay]: this.editingMenuText };
+            await supabaseClient.from('cafeterias').update({ weekly_menus: updatedMenus }).eq('id', this.editingCafeteria.id);
+            await this.fetchData();
+            alert('식단 텍스트가 저장되었습니다.');
+          }
+          this.showMenuTextModal = false;
+        },
+        async deleteCurrentImage() {
+          if (this.editingCafeteria && this.editingCafeteria.weekly_images) {
+            const updatedImages = { ...this.editingCafeteria.weekly_images };
+            delete updatedImages[this.selectedDay];
+            await supabaseClient.from('cafeterias').update({ weekly_images: updatedImages }).eq('id', this.editingCafeteria.id);
+            await this.fetchData();
+            alert('이미지가 삭제되었습니다.');
+          }
+        },
+        viewMenuImage(imgBase64) {
+          this.currentViewImage = imgBase64;
+          this.showImageModal = true;
+        },
+        async handleImageUpload(event, item, isInModal = false) {
+          const file = event.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = async (e) => {
+            const base64Img = e.target.result;
+            const updatedImages = { ...item.weekly_images, [this.selectedDay]: base64Img };
+            await supabaseClient.from('cafeterias').update({ weekly_images: updatedImages }).eq('id', item.id);
+            await this.fetchData();
+          };
+          reader.readAsDataURL(file);
+
+          alert('텍스트 문자 인식(OCR)을 진행 중입니다. 잠시만 기다려주세요.');
+          
+          try {
+            const { data: { text } } = await Tesseract.recognize(file, 'kor');
+            const updatedMenus = { ...item.weekly_menus, [this.selectedDay]: text.trim() };
+            await supabaseClient.from('cafeterias').update({ weekly_menus: updatedMenus }).eq('id', item.id);
+            
+            if (isInModal) {
+              this.editingMenuText = text.trim();
+            }
+            await this.fetchData();
+            alert('식단표 변환 및 저장 성공!');
+          } catch (e) {
+            alert('OCR 처리 중 오류가 발생했습니다.');
+          }
+        },
+        async deleteCafeteria(id) {
+          if (confirm('이 식당을 삭제하시겠습니까?')) {
+            await supabaseClient.from('cafeterias').delete().eq('id', id);
+            await this.fetchData();
+          }
+        },
+        async deleteRestaurant(id) {
+          if (confirm('이 식당을 삭제하시겠습니까?')) {
+            await supabaseClient.from('restaurants').delete().eq('id', id);
+            await this.fetchData();
+          }
         }
       }
-    }
-  }).mount('#app');
+    }).mount('#app');
+  });
 </script>
 </body>
 </html>

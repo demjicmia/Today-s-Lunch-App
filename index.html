@@ -374,7 +374,7 @@
           currentTab: 'cafeteria',
           selectedDay: '월',
           selectedCategory: '전체',
-          todayName: '월',
+          todayName: '', // 주말 예외 처리를 위해 공백으로 초기화
           days: ['월', '화', '수', '목', '금'],
           categories: ['한식', '중식', '일식', '양식', '분식', '기타'],
           isAdmin: false,
@@ -407,9 +407,15 @@
         
         const dayIdx = new Date().getDay();
         const correctMap = ['', '월', '화', '수', '목', '금', ''];
+        
+        // 평일(월~금)일 때만 해당하는 요일을 선택하고 '오늘' 태그 설정
         if (dayIdx >= 1 && dayIdx <= 5) {
           this.selectedDay = correctMap[dayIdx];
           this.todayName = correctMap[dayIdx];
+        } else {
+          // 주말(토, 일)에는 기본 뷰를 월요일로 보여주되, '오늘' 붉은 태그는 제거
+          this.selectedDay = '월';
+          this.todayName = '';
         }
 
         document.addEventListener('click', this.handleOutsideClick);
@@ -488,7 +494,6 @@
                 const { error } = await supabaseClient.from('cafeterias').update(payload).eq('id', this.form.id);
                 if (error) throw error;
               } else {
-                // 고유 ID 직접 부여하여 null constraint 오류 해결
                 payload.id = Math.floor(Date.now() / 1000);
                 payload.weekly_menus = {};
                 payload.weekly_images = {};
@@ -509,7 +514,6 @@
                 const { error } = await supabaseClient.from('restaurants').update(payload).eq('id', this.form.id);
                 if (error) throw error;
               } else {
-                // 고유 ID 직접 부여
                 payload.id = Math.floor(Date.now() / 1000);
                 const { error } = await supabaseClient.from('restaurants').insert([payload]);
                 if (error) throw error;

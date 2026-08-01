@@ -30,7 +30,6 @@
     .card-shadow { box-shadow: 0 4px 12px rgba(62, 95, 68, 0.08); }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    /* 드래그 상태 스타일 효과 */
     .dragging { opacity: 0.5; border: 2px dashed #E07A5F !important; }
   </style>
 </head>
@@ -42,7 +41,7 @@
     <div class="text-center p-6">
       <div class="text-6xl mb-4">🍱</div>
       <h1 class="text-2xl font-bold mb-2">오늘 점심 뭐 먹지?</h1>
-      <p class="text-sm opacity-80">실시간 공유 DB 연결 완료!</p>
+      <p class="text-sm opacity-95 font-medium px-4 word-break break-keep">오늘도 맛있는 하루! 동료들과 함께 채워가는 맛집 지도 🗺️</p>
     </div>
   </div>
 
@@ -117,11 +116,9 @@
           <div>
             <div class="flex items-center justify-between gap-1 mb-1">
               <span v-if="isAdmin" class="text-xs text-gray-400 cursor-grab shrink-0 font-bold select-none mr-0.5">⋮⋮</span>
-              
               <h3 class="font-bold text-gray-800 text-sm truncate flex-1 min-w-0" :title="item.name">
                 {{ item.name }}
               </h3>
-              
               <span class="text-xs font-extrabold text-terracotta shrink-0">
                 {{ item.price ? item.price.toLocaleString() + '원' : '' }}
               </span>
@@ -355,10 +352,10 @@
       </p>
       
       <div class="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
-        <label class="block text-xs font-bold text-gray-600 mb-1.5">등록된 식단표 이미지</label>
+        <label class="block text-xs font-bold text-gray-600 mb-1.5">등록된 메뉴 이미지</label>
         
         <div v-if="editingCafeteria?.weekly_images && editingCafeteria.weekly_images[selectedDay]" class="mb-2">
-          <img :src="editingCafeteria.weekly_images[selectedDay]" class="w-full h-32 object-contain rounded-lg border bg-white" alt="식단 이미지">
+          <img :src="editingCafeteria.weekly_images[selectedDay]" class="w-full h-32 object-contain rounded-lg border bg-white" alt="메뉴 이미지">
           <button @click="deleteCurrentImage" class="text-red-500 text-[10px] font-bold mt-1 hover:underline block text-right">✕ 이미지 삭제</button>
         </div>
         <div v-else class="text-[11px] text-gray-400 py-4 text-center bg-white rounded-lg border border-dashed mb-2">
@@ -372,7 +369,7 @@
       </div>
 
       <div>
-        <label class="block text-xs font-bold text-gray-600 mb-1">식단 메뉴 텍스트 직접 입력/수정</label>
+        <label class="block text-xs font-bold text-gray-600 mb-1">메뉴 텍스트 직접 입력/수정</label>
         <textarea v-model="editingMenuText" rows="5" placeholder="메뉴 내용을 줄바꿈하여 편하게 적어주세요." class="w-full p-3 text-xs border rounded-xl bg-gray-50 focus:outline-none focus:border-hunter whitespace-pre-line"></textarea>
       </div>
 
@@ -424,7 +421,6 @@
           cafeterias: [],
           restaurants: [],
 
-          // 드래그앤드롭 인덱스 보관용 변수
           draggedIdx: null,
           draggedTable: '',
 
@@ -492,8 +488,6 @@
             this.restaurants = resData.map(r => ({ ...r, showDrop: false, expanded: false }));
           }
         },
-
-        // [드래그 앤 드롭 구현 핵심 함수]
         onDragStart(event, idx, tableName) {
           this.draggedIdx = idx;
           this.draggedTable = tableName;
@@ -502,16 +496,12 @@
           if (this.draggedTable !== tableName || this.draggedIdx === null || this.draggedIdx === targetIdx) return;
 
           const list = tableName === 'cafeterias' ? this.cafeterias : this.restaurants;
-          
-          // 배열 원소 교체
           const draggedItem = list[this.draggedIdx];
           list.splice(this.draggedIdx, 1);
           list.splice(targetIdx, 0, draggedItem);
 
-          // 데이터베이스에 바뀐 레이아웃 타임스탬프 순서 일괄 갱신 처리
           try {
             for (let i = 0; i < list.length; i++) {
-              // 최초 생성일을 1초 간격 기준으로 재정렬 분배하여 created_at 저장
               const baseTime = new Date(2026, 0, 1).getTime() + (i * 5000);
               const newIsoString = new Date(baseTime).toISOString();
               
@@ -528,7 +518,6 @@
             this.draggedTable = '';
           }
         },
-
         async checkAndResetWeeklyMenus() {
           if (this.cafeterias.length === 0) return;
 
@@ -678,19 +667,17 @@
             const updatedMenus = { ...this.editingCafeteria.weekly_menus, [this.selectedDay]: this.editingMenuText };
             await supabaseClient.from('cafeterias').update({ weekly_menus: updatedMenus }).eq('id', this.editingCafeteria.id);
             await this.fetchData();
-            alert('식단 텍스트가 저장되었습니다.');
+            alert('메뉴 텍스트가 저장되었습니다.');
           }
           this.showMenuTextModal = false;
         },
         
-        // [수정 포인트] 이미지 삭제 버튼 클릭 시 내부 모달 데이터 및 하단 텍스트 필드까지 동시 리셋 연동 구현
+        // [수정 포인트] 삭제 완료 시 요청하신 멘트(사진 4)로 완벽 수정 완료
         async deleteCurrentImage() {
           if (this.editingCafeteria && this.editingCafeteria.weekly_images) {
-            // 1. DB 이미지 데이터 제거 연동
             const updatedImages = { ...this.editingCafeteria.weekly_images };
             delete updatedImages[this.selectedDay];
             
-            // 2. DB 텍스트 데이터 동시 제거 연동
             const updatedMenus = { ...this.editingCafeteria.weekly_menus };
             delete updatedMenus[this.selectedDay];
 
@@ -699,19 +686,20 @@
               weekly_menus: updatedMenus 
             }).eq('id', this.editingCafeteria.id);
             
-            // 3. 현재 띄워져있는 모달창의 프론트 데이터 실시간 지우기
             this.editingCafeteria.weekly_images[this.selectedDay] = null;
             this.editingCafeteria.weekly_menus[this.selectedDay] = '';
             this.editingMenuText = ''; 
 
             await this.fetchData();
-            alert('이미지와 등록된 식단 텍스트 내용이 함께 삭제되었습니다.');
+            alert('등록된 메뉴 이미지와 텍스트가 삭제되었습니다.');
           }
         },
         viewMenuImage(imgBase64) {
           this.currentViewImage = imgBase64;
           this.showImageModal = true;
         },
+        
+        // [수정 포인트] 사진 3 관련 분석 대기 알럿 제거 및 사진 2 관련 완료 알럿 문구 간소화 적용 완료
         async handleImageUpload(event, item, isInModal = false) {
           const file = event.target.files[0];
           if (!file) return;
@@ -724,8 +712,6 @@
             await this.fetchData();
           };
           reader.readAsDataURL(file);
-
-          alert('식단 이미지를 분석하는 중입니다. 잠시만 기다려주세요! 🔎');
           
           try {
             const { data: { text } } = await Tesseract.recognize(file, 'kor');
@@ -734,7 +720,8 @@
             
             await this.fetchData();
             
-            alert("문자 인식이 잘 되었는지 확인해주세요!\n잘못 인식된 메뉴는 직접 수정해주세요! 😉");
+            // 사진 2 피드백 반영: 가독성이 좋은 간결한 단일 안내문구로 전면 교체
+            alert("잘못 인식된 메뉴는 직접 텍스트 수정해주세요");
             
             const updatedItem = this.cafeterias.find(c => c.id === item.id);
             this.openMenuTextModal(updatedItem || item);

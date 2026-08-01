@@ -165,8 +165,8 @@
             </template>
           </div>
 
-          <div v-if="isAdmin" class="mt-2 flex justify-between border-t border-gray-100 pt-1 text-[11px] text-gray-400">
-            <button @click="deleteCafeteria(item.id)" class="text-red-400">삭제</button>
+          <div class="mt-2 flex justify-between border-t border-gray-100 pt-1 text-[11px] text-gray-400">
+            <button v-if="isAdmin" @click="deleteCafeteria(item.id)" class="text-red-400">삭제</button>
           </div>
         </div>
       </div>
@@ -382,7 +382,7 @@
           currentTab: 'cafeteria',
           selectedDay: '월',
           selectedCategory: '전체',
-          todayName: '', // 주말에는 빈값으로 유지
+          todayName: '', 
           days: ['월', '화', '수', '목', '금'],
           categories: ['한식', '중식', '일식', '양식', '분식', '기타'],
           isAdmin: false,
@@ -412,27 +412,7 @@
       },
       async mounted() {
         setTimeout(() => { this.showIntro = false; }, 2000);
-        
-        // 요일 판단: 월(1) ~ 금(5), 토(6), 일(0)
-        const now = new Date();
-        const dayIdx = now.getDay();
-        const dayMap = { 1: '월', 2: '화', 3: '수', 4: '목', 5: '금' };
-
-        if (dayIdx >= 1 && dayIdx <= 5) {
-          // 평일
-          this.currentTab = 'cafeteria';
-          this.selectedDay = dayMap[dayIdx];
-          this.todayName = dayMap[dayIdx];
-        } else {
-          // 토요일(6) 또는 일요일(0)인 주말
-          this.todayName = ''; // '오늘' 태그 완벽 제거
-          this.selectedDay = '월';
-          this.currentTab = 'restaurant'; // 일반음식점 탭으로 자동 이동
-          
-          setTimeout(() => {
-            alert("주말에는 일반음식점을 이용해주세요 😉");
-          }, 2200);
-        }
+        this.initDateTime();
 
         document.addEventListener('click', this.handleOutsideClick);
         await this.fetchData();
@@ -442,10 +422,34 @@
         document.removeEventListener('click', this.handleOutsideClick);
       },
       methods: {
+        initDateTime() {
+          const now = new Date();
+          const dayIdx = now.getDay();
+          const dayMap = { 1: '월', 2: '화', 3: '수', 4: '목', 5: '금' };
+
+          if (dayIdx >= 1 && dayIdx <= 5) {
+            // 평일
+            this.currentTab = 'cafeteria';
+            this.selectedDay = dayMap[dayIdx];
+            this.todayName = dayMap[dayIdx];
+          } else {
+            // 주말 (토:6, 일:0) -> 관리자 모드가 꺼진 초기 상태이므로 일단 제한 설정
+            this.todayName = '';
+            this.selectedDay = '월';
+            this.currentTab = 'restaurant';
+            
+            setTimeout(() => {
+              // 최초 진입 시 관리자 모드가 아닐 때만 차단 알럿 안내
+              if (!this.isAdmin) {
+                alert("주말에는 일반음식점을 이용해주세요 😉");
+              }
+            }, 2200);
+          }
+        },
         clickTab(tabName) {
           const dayIdx = new Date().getDay();
-          // 주말(토:6, 일:0)에 구내식당 탭을 누르면 경고 알럿을 띄우고 일반음식점 탭 유지
-          if (tabName === 'cafeteria' && (dayIdx === 0 || dayIdx === 6)) {
+          // [수정 포인트] 주말에 구내식당을 누르더라도 '관리자 On' 상태라면 프리패스 허용!
+          if (tabName === 'cafeteria' && (dayIdx === 0 || dayIdx === 6) && !this.isAdmin) {
             alert("주말에는 일반음식점을 이용해주세요 😉");
             this.currentTab = 'restaurant';
             return;
@@ -463,7 +467,6 @@
             this.restaurants = resData.map(r => ({ ...r, showDrop: false, expanded: false }));
           }
         },
-        // 매주 일요일 23:59 리셋 기준 처리 (식당 고유정보 및 인스타 유지, 식단 텍스트 및 사진만 리셋)
         async checkAndResetWeeklyMenus() {
           if (this.cafeterias.length === 0) return;
 
@@ -521,11 +524,21 @@
             const id = prompt('관리자 ID를 입력하세요:');
             if (id === 'lunch') {
               this.isAdmin = true;
+              // 관리자 로그인 성공 시 주말이라도 즉시 구내식당 편집을 위해 탭을 강제 열어줌
+              const dayIdx = new Date().getDay();
+              if (dayIdx === 0 || dayIdx === 6) {
+                this.currentTab = 'cafeteria';
+              }
             } else {
               alert('인증 정보가 올바르지 않습니다.');
             }
           } else {
             this.isAdmin = false;
+            // 관리자 로그아웃 시 주말이라면 다시 일반음식점으로 튕겨내기
+            const dayIdx = new Date().getDay();
+            if (dayIdx === 0 || dayIdx === 6) {
+              this.currentTab = 'restaurant';
+            }
           }
         },
         openAddModal() {

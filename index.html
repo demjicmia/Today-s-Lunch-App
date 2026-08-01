@@ -25,12 +25,11 @@
     }
   </script>
   <style>
-    body { background-color: #f0eee6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; user-select: none; }
+    body { background-color: #f0eee6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; user-select: none; -webkit-touch-callout: none; }
     .app-container { max-width: 480px; min-height: 100vh; margin: 0 auto; background-color: #FAF8F5; }
     .card-shadow { box-shadow: 0 4px 12px rgba(62, 95, 68, 0.08); }
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-    .dragging { opacity: 0.5; border: 2px dashed #E07A5F !important; }
   </style>
 </head>
 <body>
@@ -42,6 +41,19 @@
       <div class="text-6xl mb-4">🍱</div>
       <h1 class="text-2xl font-bold mb-2">오늘 점심 뭐 먹지?</h1>
       <p class="text-sm opacity-95 font-medium px-4 word-break break-keep">오늘도 맛있는 하루! 동료들과 함께 채워가는 맛집 지도 🗺️</p>
+    </div>
+  </div>
+
+  <div v-if="isOcrProcessing" class="fixed inset-0 z-50 bg-black/60 flex flex-col items-center justify-center p-6 text-white text-center">
+    <div class="bg-white text-gray-800 p-6 rounded-3xl shadow-2xl max-w-xs w-full flex flex-col items-center">
+      <i class="fa-solid fa-spinner fa-spin text-4xl text-terracotta mb-3"></i>
+      <h3 class="font-bold text-base mb-1">식단표 분석 중...</h3>
+      <p class="text-xs text-gray-500 mb-4">{{ ocrStatusText }}</p>
+      
+      <div class="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden mb-2">
+        <div class="bg-terracotta h-full transition-all duration-300" :style="{ width: ocrProgress + '%' }"></div>
+      </div>
+      <span class="text-[11px] font-bold text-terracotta">{{ ocrProgress }}%</span>
     </div>
   </div>
 
@@ -110,6 +122,9 @@
              @dragstart="onDragStart($event, idx, 'cafeterias')"
              @dragover.prevent
              @drop="onDrop($event, idx, 'cafeterias')"
+             @touchstart="onTouchStart($event, idx, 'cafeterias')"
+             @touchmove="onTouchMove($event)"
+             @touchend="onTouchEnd($event, 'cafeterias')"
              :class="{'border-2 border-dashed border-terracotta/60': isAdmin}"
              class="bg-white rounded-2xl p-3 border border-gray-100 card-shadow flex flex-col justify-between relative transition-all">
           
@@ -128,10 +143,10 @@
                   <i class="fa-solid fa-ellipsis-vertical"></i>
                 </button>
                 <div v-if="item.showDrop" class="absolute right-0 mt-20 w-24 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-1 text-xs font-medium text-gray-600 text-left" @click.stop>
-                  <button @click="openEditModal(item)" class="w-full px-2.5 py-2 hover:bg-gray-50 text-gray-700 block">
+                  <button @click="tryOpenEditModal(item)" class="w-full px-2.5 py-2 hover:bg-gray-50 text-gray-700 block">
                     ✏️ 식당 수정
                   </button>
-                  <button @click="openMenuTextModal(item)" class="w-full px-2.5 py-2 hover:bg-gray-50 text-gray-700 block border-t border-gray-50">
+                  <button @click="tryOpenMenuTextModal(item)" class="w-full px-2.5 py-2 hover:bg-gray-50 text-gray-700 block border-t border-gray-50">
                     📝 메뉴 수정
                   </button>
                 </div>
@@ -162,7 +177,7 @@
                   </div>
                   <label class="cursor-pointer block w-full py-1.5 bg-sand text-hunter font-bold text-[11px] rounded-lg shadow-sm hover:opacity-90 text-center">
                     <i class="fa-solid fa-camera"></i> 사진 등록 / OCR
-                    <input type="file" accept="image/*" class="hidden" @change="handleImageUpload($event, item, false)">
+                    <input type="file" accept="image/*" class="hidden" @change="handleImageUpload($event, item)">
                   </label>
                 </div>
               </div>
@@ -209,6 +224,9 @@
            @dragstart="onDragStart($event, idx, 'restaurants')"
            @dragover.prevent
            @drop="onDrop($event, idx, 'restaurants')"
+           @touchstart="onTouchStart($event, idx, 'restaurants')"
+           @touchmove="onTouchMove($event)"
+           @touchend="onTouchEnd($event, 'restaurants')"
            :class="{'border-2 border-dashed border-terracotta/60': isAdmin}"
            class="bg-white rounded-2xl p-4 border border-gray-100 card-shadow transition-all">
         <div class="flex justify-between items-start gap-2">
@@ -238,7 +256,7 @@
                 <i class="fa-solid fa-ellipsis-vertical"></i>
               </button>
               <div v-if="item.showDrop" class="absolute right-0 mt-1 w-24 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-1 text-xs font-medium text-left" @click.stop>
-                <button @click="openEditModal(item)" class="w-full px-2.5 py-2 hover:bg-gray-50 text-gray-700 block">
+                <button @click="tryOpenEditModal(item)" class="w-full px-2.5 py-2 hover:bg-gray-50 text-gray-700 block">
                   ✏️ 식당 수정
                 </button>
               </div>
@@ -288,7 +306,10 @@
 
         <div>
           <label class="block text-xs font-bold text-gray-600 mb-1">식당 이름 *</label>
-          <input v-model="form.name" required placeholder="예: 본관 구내식당" class="w-full p-2.5 text-xs border rounded-xl bg-gray-50 focus:outline-none focus:border-hunter">
+          <input v-model="form.name" @input="checkStoreNameDuplicate" placeholder="예: 본관 구내식당" class="w-full p-2.5 text-xs border rounded-xl bg-gray-50 focus:outline-none focus:border-hunter">
+          <p class="text-[11px] mt-1 font-semibold" :class="nameValidationClass">
+            {{ nameValidationMessage }}
+          </p>
         </div>
 
         <div>
@@ -334,8 +355,9 @@
           </div>
         </template>
 
-        <button type="submit" class="w-full py-3 bg-terracotta text-white font-bold text-sm rounded-xl shadow-md hover:opacity-90 mt-4">
-          ✓ {{ isEditing ? '저장하기' : '등록하기' }}
+        <button type="submit" :disabled="isSubmitting" :class="{'opacity-50 cursor-not-allowed bg-gray-400': isSubmitting}" class="w-full py-3 bg-terracotta text-white font-bold text-sm rounded-xl shadow-md hover:opacity-90 mt-4 flex items-center justify-center gap-2">
+          <i v-if="isSubmitting" class="fa-solid fa-spinner fa-spin"></i>
+          ✓ {{ isSubmitting ? '처리 중...' : (isEditing ? '저장하기' : '등록하기') }}
         </button>
       </form>
     </div>
@@ -364,7 +386,7 @@
 
         <label class="cursor-pointer block w-full py-2 bg-hunter text-white text-center font-bold text-xs rounded-lg shadow-sm">
           <i class="fa-solid fa-cloud-arrow-up"></i> 이미지 등록 / 변경 (OCR 문자 인식)
-          <input type="file" accept="image/*" class="hidden" @change="handleImageUpload($event, editingCafeteria, true)">
+          <input type="file" accept="image/*" class="hidden" @change="handleImageUpload($event, editingCafeteria)">
         </label>
       </div>
 
@@ -375,7 +397,10 @@
 
       <div class="grid grid-cols-2 gap-2 mt-4">
         <button @click="showMenuTextModal = false" class="py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-xs">취소</button>
-        <button @click="saveMenuText" class="py-2.5 bg-terracotta text-white rounded-xl font-bold text-xs shadow-md">변경사항 저장</button>
+        <button @click="saveMenuText" :disabled="isSubmitting" :class="{'opacity-50 cursor-not-allowed': isSubmitting}" class="py-2.5 bg-terracotta text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-1">
+          <i v-if="isSubmitting" class="fa-solid fa-spinner fa-spin"></i>
+          {{ isSubmitting ? '저장 중...' : '변경사항 저장' }}
+        </button>
       </div>
     </div>
   </div>
@@ -410,7 +435,13 @@
           isAdmin: false,
           showModal: false,
           isEditing: false,
+          isSubmitting: false, 
           
+          // OCR 로딩 관련 상태
+          isOcrProcessing: false,
+          ocrProgress: 0,
+          ocrStatusText: '이미지를 분석할 준비 중입니다...',
+
           showMenuTextModal: false,
           editingCafeteria: null,
           editingMenuText: '',
@@ -424,6 +455,9 @@
           draggedIdx: null,
           draggedTable: '',
 
+          nameValidationMessage: '',
+          nameValidationClass: 'text-gray-400',
+
           form: this.getEmptyForm()
         }
       },
@@ -433,11 +467,22 @@
             return this.restaurants;
           }
           return this.restaurants.filter(r => r.category === this.selectedCategory);
+        },
+        allStoreNames() {
+          const cafNames = this.cafeterias.map(c => c.name.trim().toLowerCase());
+          const resNames = this.restaurants.map(r => r.name.trim().toLowerCase());
+          return [...cafNames, ...resNames];
         }
       },
       async mounted() {
         setTimeout(() => { this.showIntro = false; }, 2000);
         this.initDateTime();
+
+        // Supabase Auth 세션 유지 체크
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session) {
+          this.isAdmin = true;
+        }
 
         document.addEventListener('click', this.handleOutsideClick);
         await this.fetchData();
@@ -463,7 +508,6 @@
             
             setTimeout(() => {
               if (!this.isAdmin) {
-                // 느낌표 유지 반영
                 alert("주말에는 일반음식점을 이용해주세요 😉");
               }
             }, 2200);
@@ -481,12 +525,52 @@
         async fetchData() {
           const { data: cafData } = await supabaseClient.from('cafeterias').select('*').order('created_at', { ascending: true });
           if (cafData) {
-            this.cafeterias = cafData.map(c => ({ ...c, showDrop: false }));
+            this.cafeterias = cafData.map(c => ({ ...c, showDrop: false, editingBy: null }));
           }
 
           const { data: resData } = await supabaseClient.from('restaurants').select('*').order('created_at', { ascending: true });
           if (resData) {
-            this.restaurants = resData.map(r => ({ ...r, showDrop: false, expanded: false }));
+            this.restaurants = resData.map(r => ({ ...r, showDrop: false, expanded: false, editingBy: null }));
+          }
+        },
+        async tryOpenEditModal(item) {
+          this.closeAllDropdowns();
+          const mySessionId = localStorage.getItem('my_session_id') || Math.random().toString(36).substring(7);
+          localStorage.setItem('my_session_id', mySessionId);
+
+          if (item.editingBy && item.editingBy !== mySessionId) {
+            alert("다른 유저가 수정 중입니다!");
+            return;
+          }
+          this.openEditModal(item);
+        },
+        async tryOpenMenuTextModal(item) {
+          this.closeAllDropdowns();
+          const mySessionId = localStorage.getItem('my_session_id') || Math.random().toString(36).substring(7);
+          localStorage.setItem('my_session_id', mySessionId);
+
+          if (item.editingBy && item.editingBy !== mySessionId) {
+            alert("다른 유저가 수정 중입니다!");
+            return;
+          }
+          this.openMenuTextModal(item);
+        },
+        checkStoreNameDuplicate() {
+          const val = this.form.name.trim().toLowerCase();
+          if (!val) {
+            this.nameValidationMessage = "식당 이름을 입력해주세요";
+            this.nameValidationClass = "text-amber-600";
+            return;
+          }
+          const isOwnName = this.isEditing && this.form.name.trim().toLowerCase() === (this.form.originalName || '').toLowerCase();
+          const isDuplicate = this.allStoreNames.includes(val) && !isOwnName;
+          
+          if (isDuplicate) {
+            this.nameValidationMessage = "이미 등록된 식당입니다";
+            this.nameValidationClass = "text-red-500";
+          } else {
+            this.nameValidationMessage = "등록 가능한 식당입니다.";
+            this.nameValidationClass = "text-emerald-600";
           }
         },
         onDragStart(event, idx, tableName) {
@@ -495,10 +579,37 @@
         },
         async onDrop(event, targetIdx, tableName) {
           if (this.draggedTable !== tableName || this.draggedIdx === null || this.draggedIdx === targetIdx) return;
-
+          await this.reorderItems(this.draggedIdx, targetIdx, tableName);
+        },
+        onTouchStart(event, idx, tableName) {
+          if (!this.isAdmin) return;
+          this.draggedIdx = idx;
+          this.draggedTable = tableName;
+        },
+        onTouchMove(event) {
+          if (!this.isAdmin || this.draggedIdx === null) return;
+          event.preventDefault();
+        },
+        async onTouchEnd(event, tableName) {
+          if (!this.isAdmin || this.draggedIdx === null) return;
+          const touch = event.changedTouches[0];
+          const targetElement = document.elementFromPoint(touch.clientX, touch.clientY);
+          const card = targetElement?.closest('[draggable="true"]');
+          
+          if (card) {
+            const list = tableName === 'cafeterias' ? this.cafeterias : this.restaurants;
+            const targetIdx = Array.from(card.parentNode.children).indexOf(card);
+            if (targetIdx !== -1 && targetIdx !== this.draggedIdx) {
+              await this.reorderItems(this.draggedIdx, targetIdx, tableName);
+            }
+          }
+          this.draggedIdx = null;
+          this.draggedTable = '';
+        },
+        async reorderItems(draggedIdx, targetIdx, tableName) {
           const list = tableName === 'cafeterias' ? this.cafeterias : this.restaurants;
-          const draggedItem = list[this.draggedIdx];
-          list.splice(this.draggedIdx, 1);
+          const draggedItem = list[draggedIdx];
+          list.splice(draggedIdx, 1);
           list.splice(targetIdx, 0, draggedItem);
 
           try {
@@ -513,7 +624,6 @@
             await this.fetchData();
           } catch (err) {
             console.error(err);
-            // 마침표 제거 및 느낌표 유지 적용
             alert('순서 저장에 실패했습니다 ❌');
           } finally {
             this.draggedIdx = null;
@@ -556,7 +666,7 @@
           }
         },
         getEmptyForm() {
-          return { id: null, type: 'cafeteria', name: '', location: '', price: null, memo: '', has_insta: false, insta_url: 'https://www.instagram.com/', category: '한식', menus: [{ name: '', price: null }] };
+          return { id: null, type: 'cafeteria', name: '', originalName: '', location: '', price: null, memo: '', has_insta: false, insta_url: 'https://www.instagram.com/', category: '한식', menus: [{ name: '', price: null }] };
         },
         handleOutsideClick(e) {
           if (!e.target.closest('.dropdown-container')) {
@@ -572,21 +682,31 @@
           this.closeAllDropdowns();
           item.showDrop = !currentStatus;
         },
-        toggleAdmin() {
+        // Supabase Auth를 통한 안전한 관리자 로그인/로그아웃 연동
+        async toggleAdmin() {
           if (!this.isAdmin) {
-            const id = prompt('관리자 ID를 입력하세요:');
-            if (id === 'lunch') {
+            const email = prompt('관리자 이메일을 입력하세요:');
+            if (!email) return;
+            const password = prompt('관리자 비밀번호를 입력하세요:');
+            if (!password) return;
+
+            try {
+              const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+              if (error) throw error;
+
               this.isAdmin = true;
+              alert('관리자 로그인 성공! 🔓');
               const dayIdx = new Date().getDay();
               if (dayIdx === 0 || dayIdx === 6) {
                 this.currentTab = 'cafeteria';
               }
-            } else {
-              // 마침표 제거 적용
-              alert('인증 정보가 올바르지 않습니다 🔐');
+            } catch (err) {
+              alert('로그인 실패: 관리자 계정 정보가 올바르지 않습니다 🔐');
             }
           } else {
+            await supabaseClient.auth.signOut();
             this.isAdmin = false;
+            alert('관리자 모드가 해제되었습니다 🔒');
             const dayIdx = new Date().getDay();
             if (dayIdx === 0 || dayIdx === 6) {
               this.currentTab = 'restaurant';
@@ -597,6 +717,7 @@
           this.isEditing = false;
           this.form = this.getEmptyForm();
           this.form.type = this.currentTab;
+          this.nameValidationMessage = '';
           this.showModal = true;
         },
         openEditModal(item) {
@@ -604,9 +725,21 @@
           this.isEditing = true;
           this.form = JSON.parse(JSON.stringify(item));
           this.form.type = item.category ? 'restaurant' : 'cafeteria';
+          this.form.originalName = item.name;
+          this.nameValidationMessage = '';
           this.showModal = true;
         },
         async saveStore() {
+          if (this.isSubmitting) return; 
+          
+          const val = this.form.name.trim().toLowerCase();
+          const isOwnName = this.isEditing && this.form.name.trim().toLowerCase() === (this.form.originalName || '').toLowerCase();
+          if (this.allStoreNames.includes(val) && !isOwnName) {
+            alert('이미 등록된 식당 이름입니다!');
+            return;
+          }
+
+          this.isSubmitting = true;
           try {
             if (this.form.type === 'cafeteria') {
               const payload = {
@@ -650,13 +783,14 @@
               this.selectedCategory = '전체';
             }
 
-            // 마침표 제거 및 느낌표 유지
             alert('성공적으로 저장되었습니다! 🎉');
             await this.fetchData();
             this.showModal = false;
           } catch (err) {
             console.error(err);
             alert('저장 실패: ' + (err.message || '데이터베이스 오류가 발생했습니다 ❌'));
+          } finally {
+            this.isSubmitting = false;
           }
         },
         openMenuTextModal(item) {
@@ -667,14 +801,22 @@
           this.showMenuTextModal = true;
         },
         async saveMenuText() {
-          if (this.editingCafeteria) {
-            const updatedMenus = { ...this.editingCafeteria.weekly_menus, [this.selectedDay]: this.editingMenuText };
-            await supabaseClient.from('cafeterias').update({ weekly_menus: updatedMenus }).eq('id', this.editingCafeteria.id);
-            await this.fetchData();
-            // 요청 반영: 마침표 제거 및 느낌표 살리기
-            alert('메뉴가 수정되었습니다! ✨');
+          if (this.isSubmitting) return;
+          this.isSubmitting = true;
+
+          try {
+            if (this.editingCafeteria) {
+              const updatedMenus = { ...this.editingCafeteria.weekly_menus, [this.selectedDay]: this.editingMenuText };
+              await supabaseClient.from('cafeterias').update({ weekly_menus: updatedMenus }).eq('id', this.editingCafeteria.id);
+              await this.fetchData();
+              alert('메뉴가 수정되었습니다! ✨');
+            }
+            this.showMenuTextModal = false;
+          } catch (err) {
+            alert('저장 중 오류가 발생했습니다 ❌');
+          } finally {
+            this.isSubmitting = false;
           }
-          this.showMenuTextModal = false;
         },
         async deleteCurrentImage() {
           if (this.editingCafeteria && this.editingCafeteria.weekly_images) {
@@ -694,7 +836,6 @@
             this.editingMenuText = ''; 
 
             await this.fetchData();
-            // 요청 반영: 마침표 제거 및 느낌표 살리기
             alert('등록된 이미지와 텍스트가 삭제되었습니다! 🗑️');
           }
         },
@@ -702,10 +843,12 @@
           this.currentViewImage = imgBase64;
           this.showImageModal = true;
         },
-        async handleImageUpload(event, item, isInModal = false) {
+        // OCR 로딩 프로그레스바 및 타임아웃 예외 처리 적용 메서드
+        async handleImageUpload(event, item) {
           const file = event.target.files[0];
           if (!file) return;
 
+          // 1. 이미지 Base64 변환 및 DB 저장
           const reader = new FileReader();
           reader.onload = async (e) => {
             const base64Img = e.target.result;
@@ -714,33 +857,63 @@
             await this.fetchData();
           };
           reader.readAsDataURL(file);
-          
+
+          // 2. OCR 진행 상태 활성화
+          this.isOcrProcessing = true;
+          this.ocrProgress = 0;
+          this.ocrStatusText = '이미지를 불러오는 중...';
+
+          // 3. 15초 타임아웃 방어 메커니즘 설정
+          let isTimedOut = false;
+          const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+              isTimedOut = true;
+              reject(new Error('OCR Timeout'));
+            }, 15000);
+          });
+
           try {
-            const { data: { text } } = await Tesseract.recognize(file, 'kor');
+            const ocrPromise = Tesseract.recognize(file, 'kor', {
+              logger: (m) => {
+                if (m.status === 'recognizing text') {
+                  this.ocrProgress = Math.round(m.progress * 100);
+                  this.ocrStatusText = `텍스트 인식 중... (${this.ocrProgress}%)`;
+                } else {
+                  this.ocrStatusText = m.status;
+                }
+              }
+            });
+
+            const { data: { text } } = await Promise.race([ocrPromise, timeoutPromise]);
+            
             const updatedMenus = { ...item.weekly_menus, [this.selectedDay]: text.trim() };
             await supabaseClient.from('cafeterias').update({ weekly_menus: updatedMenus }).eq('id', item.id);
             
             await this.fetchData();
-            
-            // 요청 반영: 마침표 제거 및 느낌표 살리기
-            alert("잘못 인식된 메뉴는 직접 텍스트 수정해주세요! ✍️");
+            this.isOcrProcessing = false;
+            alert("식단표 인식 완료! 잘못 인식된 텍스트는 수정해 주세요 ✍️");
             
             const updatedItem = this.cafeterias.find(c => c.id === item.id);
             this.openMenuTextModal(updatedItem || item);
 
           } catch (e) {
-            alert('문자 인식 중 오류가 발생했습니다 ❌');
+            this.isOcrProcessing = false;
+            if (isTimedOut) {
+              alert('이미지 분석 시간이 초과되었습니다 ⏱️\n화질이 너무 크거나 흐릴 수 있으니 메뉴 텍스트를 직접 입력해 주세요!');
+            } else {
+              alert('이미지 인식 중 오류가 발생했습니다 ❌\n메뉴 텍스트를 직접 입력해 주세요.');
+            }
+            const updatedItem = this.cafeterias.find(c => c.id === item.id);
+            this.openMenuTextModal(updatedItem || item);
           }
         },
         async deleteCafeteria(id) {
-          // 물음표 유지 적용
           if (confirm('이 식당을 삭제하시겠습니까? 🗑️')) {
             await supabaseClient.from('cafeterias').delete().eq('id', id);
             await this.fetchData();
           }
         },
         async deleteRestaurant(id) {
-          // 물음표 유지 적용
           if (confirm('이 식당을 삭제하시겠습니까? 🗑️')) {
             await supabaseClient.from('restaurants').delete().eq('id', id);
             await this.fetchData();

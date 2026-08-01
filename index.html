@@ -448,8 +448,11 @@
 
 <script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js')
-      .then(() => console.log('Service Worker Registered!'));
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then((reg) => console.log('Service Worker 등록 성공:', reg.scope))
+        .catch((err) => console.log('Service Worker 등록 실패:', err));
+    });
   }
 </script>
 

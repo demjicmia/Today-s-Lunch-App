@@ -2,8 +2,12 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>점심 뭐 먹지?</title>
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
@@ -40,7 +44,7 @@
     <div class="text-center p-6">
       <div class="text-6xl mb-4">🍱</div>
       <h1 class="text-2xl font-bold mb-2">오늘 점심 뭐 먹지?</h1>
-      <p class="text-xs opacity-95 font-medium px-4 word-break break-keep">오늘도 맛있는 하루! 동료들과 함께 채워가는 맛집 지도 🗺️</p>
+      <p class="text-xs opacity-95 font-medium px-4">오늘도 맛있는 하루! 동료들과 함께 채워가는 맛집 지도 🗺️</p>
     </div>
   </div>
 
@@ -69,10 +73,10 @@
     </div>
   </div>
 
-  <div v-if="isOcrProcessing" class="fixed inset-0 z-50 bg-black/60 flex flex-col items-center justify-center p-6 text-white text-center">
+  <div v-if="isOcrProcessing" class="fixed inset-0 z-50 bg-black/60 flex flex-col items-center justify-center p-6 text-center">
     <div class="bg-white text-gray-800 p-6 rounded-3xl shadow-2xl max-w-xs w-full flex flex-col items-center">
       <i class="fa-solid fa-spinner fa-spin text-4xl text-terracotta mb-3"></i>
-      <h3 class="font-bold text-base mb-1">식단표 분석 중...</h3>
+      <h3 class="font-bold text-base mb-1 text-gray-800">식단표 분석 중...</h3>
       <p class="text-xs text-gray-500 mb-4">{{ ocrStatusText }}</p>
       
       <div class="w-full bg-gray-200 h-2.5 rounded-full overflow-hidden mb-2">
@@ -82,19 +86,19 @@
     </div>
   </div>
 
-  <header class="p-4 pb-3 bg-bgsoft sticky top-0 z-10 border-b border-gray-100">
-    <div class="flex justify-between items-center mb-2.5">
-      <div>
-        <h1 class="text-xl font-black text-gray-800 flex items-center gap-1.5">
-          오늘의 점심 식당 <span class="text-lg">🍽️</span>
+  <header class="p-3.5 pb-3 bg-bgsoft sticky top-0 z-10 border-b border-gray-100">
+    <div class="flex justify-between items-center mb-2 gap-2">
+      <div class="min-w-0 flex-1">
+        <h1 class="text-base font-black text-gray-800 truncate flex items-center gap-1">
+          오늘의 점심 식당 <span class="text-sm">🍽️</span>
         </h1>
-        <p class="text-[11px] text-gray-500 mt-0.5">팀원 실시간 공유 점심 메뉴</p>
+        <p class="text-[10px] text-gray-500 truncate">팀원 실시간 공유 점심 메뉴</p>
       </div>
-      <div class="flex gap-1.5">
-        <button @click.stop="toggleAdmin" class="px-2.5 py-1.5 text-[11px] bg-white border border-gray-200 rounded-lg shadow-sm font-bold text-gray-600 hover:bg-gray-50">
+      <div class="flex gap-1 shrink-0">
+        <button @click.stop="toggleAdmin" class="px-2 py-1.5 text-[10px] bg-white border border-gray-200 rounded-lg shadow-sm font-bold text-gray-600 hover:bg-gray-50">
           <i class="fa-solid" :class="isAdmin ? 'fa-lock-open text-terracotta' : 'fa-lock'"></i> {{ isAdmin ? '관리자On' : '관리자' }}
         </button>
-        <button @click.stop="openAddModal()" class="px-2.5 py-1.5 text-[11px] bg-terracotta text-white rounded-lg shadow-sm font-bold hover:opacity-90">
+        <button @click.stop="openAddModal()" class="px-2 py-1.5 text-[10px] bg-terracotta text-white rounded-lg shadow-sm font-bold hover:opacity-90">
           + 추가
         </button>
       </div>
@@ -103,17 +107,17 @@
     <div class="grid grid-cols-2 gap-1.5 p-1 bg-gray-200/60 rounded-xl">
       <button @click="clickTab('cafeteria')" 
               :class="currentTab === 'cafeteria' ? 'bg-hunter text-white shadow' : 'text-gray-600'"
-              class="py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5">
+              class="py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1">
         🏢 구내식당
       </button>
       <button @click="clickTab('restaurant')" 
               :class="currentTab === 'restaurant' ? 'bg-hunter text-white shadow' : 'text-gray-600'"
-              class="py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5">
+              class="py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1">
         🍜 일반음식점
       </button>
     </div>
 
-    <div v-if="currentTab === 'cafeteria'" class="flex justify-between mt-2.5 gap-1">
+    <div v-if="currentTab === 'cafeteria'" class="flex justify-between mt-2 gap-1">
       <button v-for="day in days" :key="day" 
               @click="selectedDay = day"
               :class="selectedDay === day ? 'bg-terracotta text-white font-bold' : 'bg-white text-gray-600 border border-gray-200'"
@@ -123,7 +127,7 @@
       </button>
     </div>
 
-    <div v-if="currentTab === 'restaurant'" class="flex gap-1.5 mt-2.5 overflow-x-auto no-scrollbar py-0.5">
+    <div v-if="currentTab === 'restaurant'" class="flex gap-1.5 mt-2 overflow-x-auto no-scrollbar py-0.5">
       <button @click="selectedCategory = '전체'"
               :class="selectedCategory === '전체' ? 'bg-terracotta text-white font-bold' : 'bg-white text-gray-600 border border-gray-200'"
               class="px-3 py-1 rounded-lg text-[11px] whitespace-nowrap transition-all shadow-sm">
@@ -899,7 +903,7 @@
 
           this.isOcrProcessing = true;
           this.ocrProgress = 0;
-          this.ocrStatusText = '이미지를 불러오는 중...';
+          this.ocrStatusText = '이미지를 분석할 준비 중입니다...';
 
           let isTimedOut = false;
           const timeoutPromise = new Promise((_, reject) => {

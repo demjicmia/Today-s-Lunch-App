@@ -40,7 +40,7 @@
 
 <div id="app" class="app-container relative flex flex-col justify-between shadow-2xl min-h-screen">
 
-  <div v-if="showIntro" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-sand text-hunter">
+  <div v-if="showIntro" class="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-sand text-hunter">
     <div class="text-center p-6">
       <div class="text-6xl mb-4">🍱</div>
       <h1 class="text-2xl font-bold mb-2">오늘 점심 뭐 먹지?</h1>
@@ -48,7 +48,7 @@
     </div>
   </div>
 
-  <div v-if="showInstallBanner" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+  <div v-if="showInstallBanner && !isOcrProcessing" class="fixed inset-0 z-40 bg-black/60 flex items-center justify-center p-4">
     <div class="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl text-center">
       <div class="text-4xl mb-3">📱</div>
       <h3 class="font-black text-base text-gray-800 mb-1">앱처럼 더 편하게 사용하세요!</h3>
@@ -59,7 +59,7 @@
       <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-left text-[11px] text-amber-900 mb-4 space-y-1">
         <p class="font-bold">💡 설치 방법 (크롬 기준)</p>
         <p>1. 우측 상단 메뉴 (<i class="fa-solid fa-ellipsis-vertical"></i>) 누르기</p>
-        <p>2. <strong>[앱 설치]</strong> 또는 <strong>[홈 화면에 추가]</strong> 선택!</p>
+        <p>2. <strong>[설치 및 바로가기 만들기]</strong> 선택!</p>
       </div>
 
       <div class="space-y-2">
@@ -73,7 +73,7 @@
     </div>
   </div>
 
-  <div v-if="isOcrProcessing" class="fixed inset-0 z-50 bg-black/60 flex flex-col items-center justify-center p-6 text-center">
+  <div v-if="isOcrProcessing" class="fixed inset-0 z-50 bg-black/70 flex flex-col items-center justify-center p-6 text-center">
     <div class="bg-white text-gray-800 p-6 rounded-3xl shadow-2xl max-w-xs w-full flex flex-col items-center">
       <i class="fa-solid fa-spinner fa-spin text-4xl text-terracotta mb-3"></i>
       <h3 class="font-bold text-base mb-1 text-gray-800">식단표 분석 중...</h3>
@@ -962,6 +962,7 @@
         }
       }
     }).mount('#app');
+  });
 </script>
 </body>
 </html>

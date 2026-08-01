@@ -40,7 +40,32 @@
     <div class="text-center p-6">
       <div class="text-6xl mb-4">🍱</div>
       <h1 class="text-2xl font-bold mb-2">오늘 점심 뭐 먹지?</h1>
-      <p class="text-sm opacity-95 font-medium px-4 word-break break-keep">오늘도 맛있는 하루! 동료들과 함께 채워가는 맛집 지도 🗺️</p>
+      <p class="text-xs opacity-95 font-medium px-4 word-break break-keep">오늘도 맛있는 하루! 동료들과 함께 채워가는 맛집 지도 🗺️</p>
+    </div>
+  </div>
+
+  <div v-if="showInstallBanner" class="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+    <div class="bg-white w-full max-w-xs rounded-3xl p-6 shadow-2xl text-center">
+      <div class="text-4xl mb-3">📱</div>
+      <h3 class="font-black text-base text-gray-800 mb-1">앱처럼 더 편하게 사용하세요!</h3>
+      <p class="text-xs text-gray-500 mb-4 leading-relaxed">
+        홈 화면에 추가해 두시면<br>주소창 없이 <strong>전체 화면 앱</strong>으로<br>빠르게 실행할 수 있어요!
+      </p>
+
+      <div class="bg-amber-50 border border-amber-200 rounded-2xl p-3 text-left text-[11px] text-amber-900 mb-4 space-y-1">
+        <p class="font-bold">💡 설치 방법 (크롬 기준)</p>
+        <p>1. 우측 상단 메뉴 (<i class="fa-solid fa-ellipsis-vertical"></i>) 누르기</p>
+        <p>2. <strong>[앱 설치]</strong> 또는 <strong>[홈 화면에 추가]</strong> 선택!</p>
+      </div>
+
+      <div class="space-y-2">
+        <button @click="dismissInstallBanner(true)" class="w-full py-2.5 bg-terracotta text-white font-bold text-xs rounded-xl shadow">
+          알겠어요 (다시 보지 않기)
+        </button>
+        <button @click="dismissInstallBanner(false)" class="w-full py-2 bg-gray-100 text-gray-600 font-bold text-xs rounded-xl">
+          웹으로 계속 보기
+        </button>
+      </div>
     </div>
   </div>
 
@@ -57,66 +82,66 @@
     </div>
   </div>
 
-  <header class="p-5 pb-3 bg-bgsoft sticky top-0 z-10 border-b border-gray-100">
-    <div class="flex justify-between items-center mb-3">
+  <header class="p-4 pb-3 bg-bgsoft sticky top-0 z-10 border-b border-gray-100">
+    <div class="flex justify-between items-center mb-2.5">
       <div>
-        <h1 class="text-2xl font-black text-gray-800 flex items-center gap-2">
-          오늘의 점심 식당은? <span class="text-xl">🍽️</span>
+        <h1 class="text-xl font-black text-gray-800 flex items-center gap-1.5">
+          오늘의 점심 식당 <span class="text-lg">🍽️</span>
         </h1>
-        <p class="text-xs text-gray-500 mt-0.5">팀원 전체가 실시간 공유하는 점심 메뉴</p>
+        <p class="text-[11px] text-gray-500 mt-0.5">팀원 실시간 공유 점심 메뉴</p>
       </div>
-      <div class="flex gap-2">
-        <button @click.stop="toggleAdmin" class="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm font-medium text-gray-600 hover:bg-gray-50">
-          <i class="fa-solid" :class="isAdmin ? 'fa-lock-open text-terracotta' : 'fa-lock'"></i> {{ isAdmin ? '관리자 On' : '관리자' }}
+      <div class="flex gap-1.5">
+        <button @click.stop="toggleAdmin" class="px-2.5 py-1.5 text-[11px] bg-white border border-gray-200 rounded-lg shadow-sm font-bold text-gray-600 hover:bg-gray-50">
+          <i class="fa-solid" :class="isAdmin ? 'fa-lock-open text-terracotta' : 'fa-lock'"></i> {{ isAdmin ? '관리자On' : '관리자' }}
         </button>
-        <button @click.stop="openAddModal()" class="px-3 py-1.5 text-xs bg-terracotta text-white rounded-lg shadow-sm font-bold hover:opacity-90">
-          + 식당 추가
+        <button @click.stop="openAddModal()" class="px-2.5 py-1.5 text-[11px] bg-terracotta text-white rounded-lg shadow-sm font-bold hover:opacity-90">
+          + 추가
         </button>
       </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-2 p-1 bg-gray-200/60 rounded-xl">
+    <div class="grid grid-cols-2 gap-1.5 p-1 bg-gray-200/60 rounded-xl">
       <button @click="clickTab('cafeteria')" 
               :class="currentTab === 'cafeteria' ? 'bg-hunter text-white shadow' : 'text-gray-600'"
-              class="py-2.5 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2">
+              class="py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5">
         🏢 구내식당
       </button>
       <button @click="clickTab('restaurant')" 
               :class="currentTab === 'restaurant' ? 'bg-hunter text-white shadow' : 'text-gray-600'"
-              class="py-2.5 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2">
+              class="py-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1.5">
         🍜 일반음식점
       </button>
     </div>
 
-    <div v-if="currentTab === 'cafeteria'" class="flex justify-between mt-3 gap-1">
+    <div v-if="currentTab === 'cafeteria'" class="flex justify-between mt-2.5 gap-1">
       <button v-for="day in days" :key="day" 
               @click="selectedDay = day"
               :class="selectedDay === day ? 'bg-terracotta text-white font-bold' : 'bg-white text-gray-600 border border-gray-200'"
-              class="flex-1 py-2 rounded-xl text-xs transition-all text-center relative">
+              class="flex-1 py-1.5 rounded-lg text-xs transition-all text-center relative">
         {{ day }}
-        <span v-if="todayName && day === todayName" class="block text-[9px] leading-none mt-0.5 opacity-90 font-extrabold text-yellow-200">오늘</span>
+        <span v-if="todayName && day === todayName" class="block text-[8px] leading-none mt-0.5 opacity-90 font-extrabold text-yellow-200">오늘</span>
       </button>
     </div>
 
-    <div v-if="currentTab === 'restaurant'" class="flex gap-1.5 mt-3 overflow-x-auto no-scrollbar py-0.5">
+    <div v-if="currentTab === 'restaurant'" class="flex gap-1.5 mt-2.5 overflow-x-auto no-scrollbar py-0.5">
       <button @click="selectedCategory = '전체'"
               :class="selectedCategory === '전체' ? 'bg-terracotta text-white font-bold' : 'bg-white text-gray-600 border border-gray-200'"
-              class="px-3.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all shadow-sm">
+              class="px-3 py-1 rounded-lg text-[11px] whitespace-nowrap transition-all shadow-sm">
         전체
       </button>
       <button v-for="cat in categories" :key="cat" 
               @click="selectedCategory = cat"
               :class="selectedCategory === cat ? 'bg-terracotta text-white font-bold' : 'bg-white text-gray-600 border border-gray-200'"
-              class="px-3.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all shadow-sm">
+              class="px-3 py-1 rounded-lg text-[11px] whitespace-nowrap transition-all shadow-sm">
         {{ cat }}
       </button>
     </div>
   </header>
 
-  <main class="p-4 flex-1">
+  <main class="p-3.5 flex-1">
     
     <div v-if="currentTab === 'cafeteria'">
-      <div v-if="cafeterias.length > 0" class="grid grid-cols-2 gap-3">
+      <div v-if="cafeterias.length > 0" class="grid grid-cols-2 gap-2.5">
         <div v-for="(item, idx) in cafeterias" :key="item.id" 
              :draggable="isAdmin"
              @dragstart="onDragStart($event, idx, 'cafeterias')"
@@ -130,11 +155,11 @@
           
           <div>
             <div class="flex items-center justify-between gap-1 mb-1">
-              <span v-if="isAdmin" class="text-xs text-gray-400 cursor-grab shrink-0 font-bold select-none mr-0.5">⋮⋮</span>
-              <h3 class="font-bold text-gray-800 text-sm truncate flex-1 min-w-0" :title="item.name">
+              <span v-if="isAdmin" class="text-[11px] text-gray-400 cursor-grab shrink-0 font-bold select-none mr-0.5">⋮⋮</span>
+              <h3 class="font-bold text-gray-800 text-xs truncate flex-1 min-w-0" :title="item.name">
                 {{ item.name }}
               </h3>
-              <span class="text-xs font-extrabold text-terracotta shrink-0">
+              <span class="text-[11px] font-extrabold text-terracotta shrink-0">
                 {{ item.price ? item.price.toLocaleString() + '원' : '' }}
               </span>
 
@@ -142,11 +167,11 @@
                 <button @click.stop="toggleDropdown(item)" class="text-gray-400 hover:text-gray-600 p-1">
                   <i class="fa-solid fa-ellipsis-vertical"></i>
                 </button>
-                <div v-if="item.showDrop" class="absolute right-0 mt-20 w-24 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-1 text-xs font-medium text-gray-600 text-left" @click.stop>
-                  <button @click="tryOpenEditModal(item)" class="w-full px-2.5 py-2 hover:bg-gray-50 text-gray-700 block">
+                <div v-if="item.showDrop" class="absolute right-0 mt-20 w-24 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-1 text-[11px] font-medium text-gray-600 text-left" @click.stop>
+                  <button @click="tryOpenEditModal(item)" class="w-full px-2 py-1.5 hover:bg-gray-50 text-gray-700 block">
                     ✏️ 식당 수정
                   </button>
-                  <button @click="tryOpenMenuTextModal(item)" class="w-full px-2.5 py-2 hover:bg-gray-50 text-gray-700 block border-t border-gray-50">
+                  <button @click="tryOpenMenuTextModal(item)" class="w-full px-2 py-1.5 hover:bg-gray-50 text-gray-700 block border-t border-gray-50">
                     📝 메뉴 수정
                   </button>
                 </div>
@@ -160,23 +185,23 @@
           </div>
 
           <div class="mt-2 border-t border-dashed border-gray-100 pt-2">
-            <div v-if="item.weekly_menus && item.weekly_menus[selectedDay]" class="text-left text-xs text-gray-700 whitespace-pre-line mb-2 bg-gray-50 p-2 rounded-lg border border-gray-100">
+            <div v-if="item.weekly_menus && item.weekly_menus[selectedDay]" class="text-left text-[11px] text-gray-700 whitespace-pre-line mb-2 bg-gray-50 p-2 rounded-lg border border-gray-100 leading-snug">
               {{ item.weekly_menus[selectedDay] }}
             </div>
 
             <template v-if="item.has_insta">
-              <a :href="item.insta_url" target="_blank" class="w-full py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow-sm">
+              <a :href="item.insta_url" target="_blank" class="w-full py-1.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-[11px] font-bold flex items-center justify-center gap-1 shadow-sm">
                 <i class="fa-brands fa-instagram"></i> 인스타로 보기
               </a>
             </template>
             <template v-else>
               <div v-if="!item.weekly_menus || !item.weekly_menus[selectedDay]">
                 <div v-if="!item.weekly_images || !item.weekly_images[selectedDay]">
-                  <div class="text-[11px] text-gray-400 py-3 text-center bg-gray-50/50 rounded-xl mb-2">
+                  <div class="text-[10px] text-gray-400 py-2.5 text-center bg-gray-50/50 rounded-xl mb-1.5">
                     등록된 메뉴 없음
                   </div>
-                  <label class="cursor-pointer block w-full py-1.5 bg-sand text-hunter font-bold text-[11px] rounded-lg shadow-sm hover:opacity-90 text-center">
-                    <i class="fa-solid fa-camera"></i> 사진 등록 / OCR
+                  <label class="cursor-pointer block w-full py-1.5 bg-sand text-hunter font-bold text-[10px] rounded-lg shadow-sm hover:opacity-90 text-center">
+                    <i class="fa-solid fa-camera"></i> 사진 / OCR
                     <input type="file" accept="image/*" class="hidden" @change="handleImageUpload($event, item)">
                   </label>
                 </div>
@@ -186,39 +211,39 @@
                 <button v-if="item.weekly_images && item.weekly_images[selectedDay]" 
                         @click="viewMenuImage(item.weekly_images[selectedDay])"
                         class="w-full py-1.5 text-center bg-gray-200 hover:bg-gray-300 text-gray-700 text-[10px] font-bold rounded-lg block shadow-sm">
-                  🖼️ 메뉴 이미지로 보기
+                  🖼️ 메뉴 이미지 보기
                 </button>
               </div>
             </template>
           </div>
 
-          <div v-if="isAdmin" class="mt-2 flex justify-between border-t border-gray-100 pt-1 text-[11px] text-gray-400">
+          <div v-if="isAdmin" class="mt-2 flex justify-between border-t border-gray-100 pt-1 text-[10px] text-gray-400">
             <button @click="deleteCafeteria(item.id)" class="text-red-400 hover:underline">삭제</button>
           </div>
         </div>
       </div>
       <div v-else class="text-center py-12 text-gray-400 text-xs">
-        등록된 구내식당이 없습니다. 오른쪽 위의 '+ 식당 추가'로 등록해 보세요!
+        등록된 구내식당이 없습니다. 오른쪽 위의 '+ 추가'로 등록해 보세요!
       </div>
 
-      <div class="mt-4 bg-orange-50 border border-orange-200 rounded-xl p-3.5 space-y-2 text-orange-800 shadow-sm">
-        <div class="flex items-start gap-2">
-          <span class="text-base leading-none">💡</span>
-          <p class="text-[11px] font-medium leading-snug">
-            주요 인스타 연동 구내식당은 <strong>오전 11시 전후</strong>로 당일 메뉴가 업데이트됩니다!
+      <div class="mt-3.5 bg-orange-50 border border-orange-200 rounded-xl p-3 space-y-1.5 text-orange-800 shadow-sm">
+        <div class="flex items-start gap-1.5">
+          <span class="text-sm leading-none">💡</span>
+          <p class="text-[10px] font-medium leading-snug">
+            주요 인스타 구내식당은 <strong>오전 11시 전후</strong>로 당일 메뉴가 업데이트됩니다!
           </p>
         </div>
         <div class="border-t border-orange-200/60 my-1"></div>
-        <div class="flex items-start gap-2">
-          <span class="text-base leading-none">🔄</span>
-          <p class="text-[11px] font-medium leading-snug">
+        <div class="flex items-start gap-1.5">
+          <span class="text-sm leading-none">🔄</span>
+          <p class="text-[10px] font-medium leading-snug">
             구내식당 메뉴 리스트는 <strong>매주 일요일 밤 12시(23:59)</strong>에 자동으로 리셋됩니다.
           </p>
         </div>
       </div>
     </div>
 
-    <div v-if="currentTab === 'restaurant'" class="flex flex-col gap-3">
+    <div v-if="currentTab === 'restaurant'" class="flex flex-col gap-2.5">
       <div v-for="(item, idx) in filteredRestaurants" :key="item.id" 
            :draggable="isAdmin"
            @dragstart="onDragStart($event, idx, 'restaurants')"
@@ -228,26 +253,26 @@
            @touchmove="onTouchMove($event)"
            @touchend="onTouchEnd($event, 'restaurants')"
            :class="{'border-2 border-dashed border-terracotta/60': isAdmin}"
-           class="bg-white rounded-2xl p-4 border border-gray-100 card-shadow transition-all">
+           class="bg-white rounded-2xl p-3.5 border border-gray-100 card-shadow transition-all">
         <div class="flex justify-between items-start gap-2">
           
           <div class="flex-1 min-w-0 flex items-center gap-1.5">
-            <span v-if="isAdmin" class="text-sm text-gray-400 cursor-grab shrink-0 font-bold select-none mr-1">⋮⋮</span>
+            <span v-if="isAdmin" class="text-xs text-gray-400 cursor-grab shrink-0 font-bold select-none mr-1">⋮⋮</span>
             <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 flex-wrap">
-                <h3 class="font-bold text-gray-800 text-base truncate">{{ item.name }}</h3>
-                <span class="px-2 py-0.5 text-[10px] bg-emerald-100 text-emerald-800 rounded-md font-bold shrink-0">
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <h3 class="font-bold text-gray-800 text-sm truncate">{{ item.name }}</h3>
+                <span class="px-2 py-0.5 text-[9px] bg-emerald-100 text-emerald-800 rounded-md font-bold shrink-0">
                   {{ item.category }}
                 </span>
               </div>
-              <p v-if="item.memo" class="text-[11px] text-emerald-700 font-medium mt-1 truncate">
+              <p v-if="item.memo" class="text-[10px] text-emerald-700 font-medium mt-1 truncate">
                 💬 {{ item.memo }}
               </p>
             </div>
           </div>
           
-          <div class="flex items-center gap-2 shrink-0">
-            <span v-if="item.location" class="text-xs text-gray-500 font-medium max-w-[120px] truncate" :title="item.location">
+          <div class="flex items-center gap-1.5 shrink-0">
+            <span v-if="item.location" class="text-[11px] text-gray-500 font-medium max-w-[100px] truncate" :title="item.location">
               📍 {{ item.location }}
             </span>
 
@@ -255,8 +280,8 @@
               <button @click.stop="toggleDropdown(item)" class="text-gray-400 hover:text-gray-600 p-1">
                 <i class="fa-solid fa-ellipsis-vertical"></i>
               </button>
-              <div v-if="item.showDrop" class="absolute right-0 mt-1 w-24 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-1 text-xs font-medium text-left" @click.stop>
-                <button @click="tryOpenEditModal(item)" class="w-full px-2.5 py-2 hover:bg-gray-50 text-gray-700 block">
+              <div v-if="item.showDrop" class="absolute right-0 mt-1 w-24 bg-white border border-gray-100 rounded-xl shadow-xl z-20 py-1 text-[11px] font-medium text-left" @click.stop>
+                <button @click="tryOpenEditModal(item)" class="w-full px-2 py-1.5 hover:bg-gray-50 text-gray-700 block">
                   ✏️ 식당 수정
                 </button>
               </div>
@@ -266,18 +291,18 @@
         </div>
 
         <button @click="item.expanded = !item.expanded" 
-                class="w-full mt-3 py-2 bg-emerald-50 text-emerald-700 font-bold text-xs rounded-xl flex items-center justify-center gap-1">
+                class="w-full mt-2.5 py-1.5 bg-emerald-50 text-emerald-700 font-bold text-[11px] rounded-xl flex items-center justify-center gap-1">
           🍽️ 메뉴 보기 {{ item.expanded ? '▲' : '▼' }}
         </button>
 
-        <div v-if="item.expanded" class="mt-3 space-y-2 border-t border-gray-100 pt-2">
-          <div v-for="menu in item.menus" :key="menu.name" class="flex justify-between text-xs py-1 border-b border-gray-50">
+        <div v-if="item.expanded" class="mt-2.5 space-y-1.5 border-t border-gray-100 pt-2">
+          <div v-for="menu in item.menus" :key="menu.name" class="flex justify-between text-[11px] py-0.5 border-b border-gray-50">
             <span class="text-gray-700 font-medium">{{ menu.name }}</span>
             <span class="text-terracotta font-bold">{{ menu.price ? menu.price.toLocaleString() + '원' : '' }}</span>
           </div>
         </div>
 
-        <div v-if="isAdmin" class="mt-2 flex justify-end border-t pt-1 text-xs text-gray-400">
+        <div v-if="isAdmin" class="mt-2 flex justify-end border-t pt-1 text-[10px] text-gray-400">
           <button @click="deleteRestaurant(item.id)" class="text-red-400 hover:underline">삭제</button>
         </div>
       </div>
@@ -289,47 +314,47 @@
   </main>
 
   <div v-if="showModal" class="fixed inset-0 bg-black/50 z-40 flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 max-h-[90vh] overflow-y-auto" @click.stop>
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="font-bold text-lg text-gray-800">{{ isEditing ? '식당 정보 수정' : '식당 추가하기' }}</h2>
+    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-4 sm:p-5 max-h-[90vh] overflow-y-auto" @click.stop>
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-bold text-base text-gray-800">{{ isEditing ? '식당 정보 수정' : '식당 추가하기' }}</h2>
         <button @click="showModal = false" class="text-gray-400 text-xl">&times;</button>
       </div>
 
-      <form @submit.prevent="saveStore" class="space-y-4">
+      <form @submit.prevent="saveStore" class="space-y-3">
         <div>
-          <label class="block text-xs font-bold text-gray-600 mb-1">식당 종류</label>
+          <label class="block text-[11px] font-bold text-gray-600 mb-1">식당 종류</label>
           <div class="grid grid-cols-2 gap-2">
-            <button type="button" @click="form.type = 'cafeteria'" :class="form.type === 'cafeteria' ? 'bg-hunter text-white' : 'bg-gray-100 text-gray-600'" class="py-2 text-xs font-bold rounded-xl">🏢 구내식당</button>
-            <button type="button" @click="form.type = 'restaurant'" :class="form.type === 'restaurant' ? 'bg-hunter text-white' : 'bg-gray-100 text-gray-600'" class="py-2 text-xs font-bold rounded-xl">🍜 일반음식점</button>
+            <button type="button" @click="form.type = 'cafeteria'" :class="form.type === 'cafeteria' ? 'bg-hunter text-white' : 'bg-gray-100 text-gray-600'" class="py-2 text-[11px] font-bold rounded-xl">🏢 구내식당</button>
+            <button type="button" @click="form.type = 'restaurant'" :class="form.type === 'restaurant' ? 'bg-hunter text-white' : 'bg-gray-100 text-gray-600'" class="py-2 text-[11px] font-bold rounded-xl">🍜 일반음식점</button>
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-gray-600 mb-1">식당 이름 *</label>
+          <label class="block text-[11px] font-bold text-gray-600 mb-1">식당 이름 *</label>
           <input v-model="form.name" @input="checkStoreNameDuplicate" placeholder="예: 본관 구내식당" class="w-full p-2.5 text-xs border rounded-xl bg-gray-50 focus:outline-none focus:border-hunter">
-          <p class="text-[11px] mt-1 font-semibold" :class="nameValidationClass">
+          <p class="text-[10px] mt-1 font-semibold" :class="nameValidationClass">
             {{ nameValidationMessage }}
           </p>
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-gray-600 mb-1">위치 간단 설명</label>
+          <label class="block text-[11px] font-bold text-gray-600 mb-1">위치 간단 설명</label>
           <input v-model="form.location" placeholder="예: 본관 2층, 옆건물 지하1층" class="w-full p-2.5 text-xs border rounded-xl bg-gray-50">
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-gray-600 mb-1">한줄 메모</label>
+          <label class="block text-[11px] font-bold text-gray-600 mb-1">한줄 메모</label>
           <input v-model="form.memo" placeholder="예: 후식 커피 제공, 12시 이후 웨이팅" class="w-full p-2.5 text-xs border rounded-xl bg-gray-50">
         </div>
 
         <template v-if="form.type === 'cafeteria'">
           <div>
-            <label class="block text-xs font-bold text-gray-600 mb-1">식사 금액(원)</label>
+            <label class="block text-[11px] font-bold text-gray-600 mb-1">식사 금액(원)</label>
             <input type="number" v-model.number="form.price" placeholder="예: 7500" class="w-full p-2.5 text-xs border rounded-xl bg-gray-50">
           </div>
           <div class="p-3 bg-gray-50 rounded-xl space-y-2">
             <div class="flex justify-between items-center">
-              <span class="text-xs font-bold text-gray-700">인스타그램 연동 사용 유무</span>
+              <span class="text-[11px] font-bold text-gray-700">인스타그램 연동 사용 유무</span>
               <input type="checkbox" v-model="form.has_insta" class="w-4 h-4 accent-hunter">
             </div>
             <input v-if="form.has_insta" v-model="form.insta_url" placeholder="인스타 URL 혹은 ID 입력" class="w-full p-2 text-xs border rounded-lg">
@@ -338,24 +363,24 @@
 
         <template v-if="form.type === 'restaurant'">
           <div>
-            <label class="block text-xs font-bold text-gray-600 mb-1">음식 카테고리</label>
+            <label class="block text-[11px] font-bold text-gray-600 mb-1">음식 카테고리</label>
             <div class="grid grid-cols-3 gap-1.5">
-              <button type="button" v-for="cat in categories" :key="cat" @click="form.category = cat" :class="form.category === cat ? 'bg-terracotta text-white' : 'bg-gray-100 text-gray-600'" class="py-1.5 text-xs rounded-lg font-medium">{{ cat }}</button>
+              <button type="button" v-for="cat in categories" :key="cat" @click="form.category = cat" :class="form.category === cat ? 'bg-terracotta text-white' : 'bg-gray-100 text-gray-600'" class="py-1.5 text-[11px] rounded-lg font-medium">{{ cat }}</button>
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-bold text-gray-600 mb-1">메뉴 설정 (최소 1개) *</label>
-            <div v-for="(m, i) in form.menus" :key="i" class="flex gap-2 mb-2">
+            <label class="block text-[11px] font-bold text-gray-600 mb-1">메뉴 설정 (최소 1개) *</label>
+            <div v-for="(m, i) in form.menus" :key="i" class="flex gap-1.5 mb-2">
               <input v-model="m.name" placeholder="메뉴명" required class="flex-1 p-2 text-xs border rounded-lg">
-              <input type="number" v-model.number="m.price" placeholder="가격" required class="w-24 p-2 text-xs border rounded-lg">
+              <input type="number" v-model.number="m.price" placeholder="가격" required class="w-20 p-2 text-xs border rounded-lg">
               <button type="button" @click="form.menus.splice(i, 1)" v-if="form.menus.length > 1" class="text-red-400 text-xs px-1">✕</button>
             </div>
-            <button type="button" @click="form.menus.push({name:'', price: null})" class="w-full py-2 border border-dashed border-terracotta text-terracotta text-xs font-bold rounded-xl">+ 메뉴 추가하기</button>
+            <button type="button" @click="form.menus.push({name:'', price: null})" class="w-full py-1.5 border border-dashed border-terracotta text-terracotta text-[11px] font-bold rounded-xl">+ 메뉴 추가하기</button>
           </div>
         </template>
 
-        <button type="submit" :disabled="isSubmitting" :class="{'opacity-50 cursor-not-allowed bg-gray-400': isSubmitting}" class="w-full py-3 bg-terracotta text-white font-bold text-sm rounded-xl shadow-md hover:opacity-90 mt-4 flex items-center justify-center gap-2">
+        <button type="submit" :disabled="isSubmitting" :class="{'opacity-50 cursor-not-allowed bg-gray-400': isSubmitting}" class="w-full py-2.5 bg-terracotta text-white font-bold text-xs rounded-xl shadow-md hover:opacity-90 mt-3 flex items-center justify-center gap-2">
           <i v-if="isSubmitting" class="fa-solid fa-spinner fa-spin"></i>
           ✓ {{ isSubmitting ? '처리 중...' : (isEditing ? '저장하기' : '등록하기') }}
         </button>
@@ -364,42 +389,42 @@
   </div>
 
   <div v-if="showMenuTextModal" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-md rounded-2xl p-5 shadow-2xl max-h-[90vh] overflow-y-auto" @click.stop>
-      <div class="flex justify-between items-center mb-3">
-        <h2 class="font-bold text-base text-gray-800">📝 메뉴 수정하기</h2>
+    <div class="bg-white w-full max-w-md rounded-2xl p-4 shadow-2xl max-h-[90vh] overflow-y-auto" @click.stop>
+      <div class="flex justify-between items-center mb-2.5">
+        <h2 class="font-bold text-sm text-gray-800">📝 메뉴 수정하기</h2>
         <button @click="showMenuTextModal = false" class="text-gray-400 text-xl">&times;</button>
       </div>
-      <p class="text-xs text-gray-500 mb-3 font-medium">
+      <p class="text-[11px] text-gray-500 mb-2.5 font-medium">
         식당: <span class="text-hunter font-bold">{{ editingCafeteria?.name }}</span> | 요일: <span class="text-terracotta font-bold">{{ selectedDay }}요일</span>
       </p>
       
-      <div class="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
-        <label class="block text-xs font-bold text-gray-600 mb-1.5">등록된 메뉴 이미지</label>
+      <div class="mb-3 p-2.5 bg-gray-50 rounded-xl border border-gray-200">
+        <label class="block text-[11px] font-bold text-gray-600 mb-1">등록된 메뉴 이미지</label>
         
         <div v-if="editingCafeteria?.weekly_images && editingCafeteria.weekly_images[selectedDay]" class="mb-2">
-          <img :src="editingCafeteria.weekly_images[selectedDay]" class="w-full h-32 object-contain rounded-lg border bg-white" alt="메뉴 이미지">
+          <img :src="editingCafeteria.weekly_images[selectedDay]" class="w-full h-28 object-contain rounded-lg border bg-white" alt="메뉴 이미지">
           <button @click="deleteCurrentImage" class="text-red-500 text-[10px] font-bold mt-1 hover:underline block text-right">✕ 이미지 삭제</button>
         </div>
-        <div v-else class="text-[11px] text-gray-400 py-4 text-center bg-white rounded-lg border border-dashed mb-2">
+        <div v-else class="text-[10px] text-gray-400 py-3 text-center bg-white rounded-lg border border-dashed mb-1.5">
           등록된 이미지가 없습니다.
         </div>
 
-        <label class="cursor-pointer block w-full py-2 bg-hunter text-white text-center font-bold text-xs rounded-lg shadow-sm">
-          <i class="fa-solid fa-cloud-arrow-up"></i> 이미지 등록 / 변경 (OCR 문자 인식)
+        <label class="cursor-pointer block w-full py-1.5 bg-hunter text-white text-center font-bold text-[11px] rounded-lg shadow-sm">
+          <i class="fa-solid fa-cloud-arrow-up"></i> 이미지 등록 / 변경 (OCR)
           <input type="file" accept="image/*" class="hidden" @change="handleImageUpload($event, editingCafeteria)">
         </label>
       </div>
 
       <div>
-        <label class="block text-xs font-bold text-gray-600 mb-1">메뉴 텍스트 직접 입력/수정</label>
-        <textarea v-model="editingMenuText" rows="5" placeholder="메뉴 내용을 줄바꿈하여 편하게 적어주세요." class="w-full p-3 text-xs border rounded-xl bg-gray-50 focus:outline-none focus:border-hunter whitespace-pre-line"></textarea>
+        <label class="block text-[11px] font-bold text-gray-600 mb-1">메뉴 텍스트 직접 입력/수정</label>
+        <textarea v-model="editingMenuText" rows="4" placeholder="메뉴 내용을 줄바꿈하여 편하게 적어주세요." class="w-full p-2.5 text-xs border rounded-xl bg-gray-50 focus:outline-none focus:border-hunter whitespace-pre-line"></textarea>
       </div>
 
-      <div class="grid grid-cols-2 gap-2 mt-4">
-        <button @click="showMenuTextModal = false" class="py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-xs">취소</button>
-        <button @click="saveMenuText" :disabled="isSubmitting" :class="{'opacity-50 cursor-not-allowed': isSubmitting}" class="py-2.5 bg-terracotta text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-1">
+      <div class="grid grid-cols-2 gap-2 mt-3">
+        <button @click="showMenuTextModal = false" class="py-2 bg-gray-100 text-gray-600 rounded-xl font-bold text-xs">취소</button>
+        <button @click="saveMenuText" :disabled="isSubmitting" :class="{'opacity-50 cursor-not-allowed': isSubmitting}" class="py-2 bg-terracotta text-white rounded-xl font-bold text-xs shadow-md flex items-center justify-center gap-1">
           <i v-if="isSubmitting" class="fa-solid fa-spinner fa-spin"></i>
-          {{ isSubmitting ? '저장 중...' : '변경사항 저장' }}
+          {{ isSubmitting ? '저장 중...' : '저장하기' }}
         </button>
       </div>
     </div>
@@ -426,6 +451,7 @@
       data() {
         return {
           showIntro: true,
+          showInstallBanner: false,
           currentTab: 'cafeteria',
           selectedDay: '월',
           selectedCategory: '전체',
@@ -476,6 +502,7 @@
       async mounted() {
         setTimeout(() => { this.showIntro = false; }, 2000);
         this.initDateTime();
+        this.checkMobileInstallBanner();
 
         const { data: { session } } = await supabaseClient.auth.getSession();
         if (session) {
@@ -490,6 +517,23 @@
         document.removeEventListener('click', this.handleOutsideClick);
       },
       methods: {
+        checkMobileInstallBanner() {
+          const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+          const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+          const dismissed = localStorage.getItem('hide_install_banner');
+
+          if (isMobile && !isStandalone && !dismissed) {
+            setTimeout(() => {
+              this.showInstallBanner = true;
+            }, 2500);
+          }
+        },
+        dismissInstallBanner(neverShowAgain) {
+          if (neverShowAgain) {
+            localStorage.setItem('hide_install_banner', 'true');
+          }
+          this.showInstallBanner = false;
+        },
         initDateTime() {
           const now = new Date();
           const dayIdx = now.getDay();
@@ -914,7 +958,6 @@
         }
       }
     }).mount('#app');
-  });
 </script>
 </body>
 </html>

@@ -362,7 +362,8 @@
 <script>
   window.addEventListener('DOMContentLoaded', () => {
     const SUPABASE_URL = 'https://ocjnfrjmgmwgatlbfkqx.supabase.co'; 
-    const SUPABASE_KEY = 'sb_publishable_G2c0vjwpxVtc5vUWY0QbdQ_npNiE'; 
+    // 전체 Publishable API Key 적용 완료
+    const SUPABASE_KEY = 'sb_publishable_G2c0vjwpxVtc5vUWY0QbdQ_npNiE_c90c7490'; 
     const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     const { createApp } = Vue;
@@ -514,7 +515,7 @@
               this.selectedCategory = '전체';
             }
 
-            alert('성공적으로 저장되었습니다!');
+            alert('성공적으로 저장되었습니다! 🎉');
             await this.fetchData();
             this.showModal = false;
           } catch (err) {

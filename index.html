@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>점심 뭐 먹지?</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            sand: '#DDD6B9',
+            hunter: '#3E5F44',
+            terracotta: '#E07A5F',
+            bgsoft: '#FAF8F5'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body { background-color: #f0eee6; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; user-select: none; }
+    .app-container { max-width: 480px; min-height: 100vh; margin: 0 auto; background-color: #FAF8F5; }
+    .card-shadow { box-shadow: 0 4px 12px rgba(62, 95, 68, 0.08); }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body>
+
+<div id="app" class="app-container relative flex flex-col justify-between shadow-2xl min-h-screen">
+
+  <div v-if="showIntro" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-sand text-hunter">
+    <div class="text-center p-6">
+      <div class="w-32 h-32 mx-auto mb-4 bg-white rounded-full flex items-center justify-center shadow-lg text-5xl">
+        🍱
+      </div>
+      <h1 class="text-2xl font-bold mb-2">오늘 점심 뭐 먹지?</h1>
+      <p class="text-sm opacity-80">행복한 메뉴 고민을 시작합니다!</p>
+    </div>
+  </div>
+
+  <header class="p-5 pb-3 bg-bgsoft sticky top-0 z-10 border-b border-gray-100">
+    <div class="flex justify-between items-center mb-3">
+      <div>
+        <h1 class="text-2xl font-black text-gray-800 flex items-center gap-2">
+          오늘의 점심 식당은? <span class="text-xl">🍽️</span>
+        </h1>
+        <p class="text-xs text-gray-500 mt-0.5">지속적인 식당 및 메뉴 관리가 가능합니다.</p>
+      </div>
+      <div class="flex gap-2">
+        <button @click.stop="toggleAdmin" class="px-3 py-1.5 text-xs bg-white border border-gray-200 rounded-lg shadow-sm font-medium text-gray-600 hover:bg-gray-50">
+          <i class="fa-solid" :class="isAdmin ? 'fa-lock-open text-terracotta' : 'fa-lock'"></i> {{ isAdmin ? '관리자 On' : '관리자' }}
+        </button>
+        <button @click.stop="openAddModal()" class="px-3 py-1.5 text-xs bg-terracotta text-white rounded-lg shadow-sm font-bold hover:opacity-90">
+          + 식당 추가
+        </button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-2 p-1 bg-gray-200/60 rounded-xl">
+      <button @click="currentTab = 'cafeteria'" 
+              :class="currentTab === 'cafeteria' ? 'bg-hunter text-white shadow' : 'text-gray-600'"
+              class="py-2.5 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2">
+        🏢 구내식당
+      </button>
+      <button @click="currentTab = 'restaurant'" 
+              :class="currentTab === 'restaurant' ? 'bg-hunter text-white shadow' : 'text-gray-600'"
+              class="py-2.5 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2">
+        🍜 일반음식점
+      </button>
+    </div>
+
+    <div v-if="currentTab === 'cafeteria'" class="flex justify-between mt-3 gap-1">
+      <button v-for="day in days" :key="day" 
+              @click="selectedDay = day"
+              :class="selectedDay === day ? 'bg-terracotta text-white font-bold' : 'bg-white text-gray-600 border border-gray-200'"
+              class="flex-1 py-2 rounded-xl text-xs transition-all text-center">
+        {{ day }}
+        <span v-if="day === todayName" class="block text-[9px] leading-none mt-0.5 opacity-80">오늘</span>
+      </button>
+    </div>
+
+    <div v-if="currentTab === 'restaurant'" class="flex gap-1.5 mt-3 overflow-x-auto no-scrollbar py-0.5">
+      <button @click="selectedCategory = '전체'"
+              :class="selectedCategory === '전체' ? 'bg-terracotta text-white font-bold' : 'bg-white text-gray-600 border border-gray-200'"
+              class="px-3.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all shadow-sm">
+        전체
+      </button>
+      <button v-for="cat in categories" :key="cat" 
+              @click="selectedCategory = cat"
+              :class="selectedCategory === cat ? 'bg-terracotta text-white font-bold' : 'bg-white text-gray-600 border border-gray-200'"
+              class="px-3.5 py-1.5 rounded-xl text-xs whitespace-nowrap transition-all shadow-sm">
+        {{ cat }}
+      </button>
+    </div>
+  </header>
+
+  <main class="p-4 flex-1">
+    
+    <div v-if="currentTab === 'cafeteria'">
+      <div class="grid grid-cols-2 gap-3">
+        <div v-for="(item, idx) in cafeterias" :key="item.id" class="bg-white rounded-2xl p-3 border border-gray-100 card-shadow flex flex-col justify-between relative">
+          
+          <div>
+            <div class="flex items-center justify-between gap-1 mb-1">
+              <h3 class="font-bold text-gray-800 text-sm truncate flex-1 min-w-0" :title="item.name">
+                {{ item.name }}
+              </h3>
+              
+              <span class="text-xs font-extrabold text-terracotta shrink-0">
+                {{ item.price ? item.price.toLocaleString() + '원' : '' }}
+              </span>
+
+              <div class="relative shrink-0 dropdown-container">
+                <button @click.stop="toggleDropdown(item)" class="text-gray-400 hover:text-gray-600 p-1">
+                  <i class="fa-solid fa-ellipsis-vertical"></i>
+                </button>
+                <div v-if="item.showDrop" class="absolute right-0 mt-1 w-28 bg-white border rounded-xl shadow-lg z-20 py-1 text-xs text-left" @click.stop>
+                  <button @click="openEditModal(item)" class="w-full px-3 py-2 hover:bg-gray-50 text-gray-700 font-medium">
+                    ✏️ 식당 정보 수정
+                  </button>
+                  <button @click="openMenuTextModal(item)" class="w-full px-3 py-2 hover:bg-gray-50 text-terracotta font-bold border-t">
+                    📝 메뉴 수정하기
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-[10px] text-gray-400 truncate">📍 {{ item.location }}</p>
+            <span v-if="item.memo" class="inline-block max-w-full text-[9px] bg-stone-100 text-stone-600 px-1.5 py-0.5 rounded-md mt-1 truncate font-medium">
+              💬 {{ item.memo }}
+            </span>
+          </div>
+
+          <div class="mt-2 border-t border-dashed border-gray-100 pt-2">
+            <div v-if="item.weeklyMenus && item.weeklyMenus[selectedDay]" class="text-left text-xs text-gray-700 whitespace-pre-line mb-2 bg-gray-50 p-2 rounded-lg border border-gray-100">
+              {{ item.weeklyMenus[selectedDay] }}
+            </div>
+
+            <template v-if="item.hasInsta">
+              <a :href="item.instaUrl" target="_blank" class="w-full py-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1 shadow-sm">
+                <i class="fa-brands fa-instagram"></i> 인스타로 보기
+              </a>
+            </template>
+            <template v-else>
+              <div v-if="!item.weeklyMenus || !item.weeklyMenus[selectedDay]" class="text-[11px] text-gray-400 py-3 text-center bg-gray-50/50 rounded-xl mb-2">
+                등록된 메뉴 없음
+              </div>
+              
+              <button v-if="item.weeklyImages && item.weeklyImages[selectedDay]" 
+                      @click="viewMenuImage(item.weeklyImages[selectedDay])"
+                      class="w-full mb-1.5 py-1 text-center bg-gray-200 hover:bg-gray-300 text-gray-700 text-[10px] font-bold rounded-lg block">
+                🖼️ 메뉴 이미지로 보기
+              </button>
+
+              <label class="cursor-pointer block w-full py-1.5 bg-sand text-hunter font-bold text-[11px] rounded-lg shadow-sm hover:opacity-90 text-center">
+                <i class="fa-solid fa-camera"></i> 사진 등록 / OCR
+                <input type="file" accept="image/*" class="hidden" @change="handleImageUpload($event, item, false)">
+              </label>
+            </template>
+          </div>
+
+          <div v-if="isAdmin" class="mt-2 flex justify-between border-t border-gray-100 pt-1 text-[11px] text-gray-400">
+            <button @click="moveItem(cafeterias, idx, -1)">◀ 이동</button>
+            <button @click="deleteItem(cafeterias, idx)" class="text-red-400">삭제</button>
+            <button @click="moveItem(cafeterias, idx, 1)">이동 ▶</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 bg-orange-50 border border-orange-200 rounded-xl p-3 flex items-center gap-2 text-orange-800 shadow-sm">
+        <span class="text-base">💡</span>
+        <p class="text-[11px] font-medium leading-snug">
+          주요 인스타 연동 구내식당은 <strong>오전 11시 전후</strong>로 당일 메뉴가 업데이트됩니다!
+        </p>
+      </div>
+    </div>
+
+    <div v-if="currentTab === 'restaurant'" class="flex flex-col gap-3">
+      <div v-for="(item, idx) in filteredRestaurants" :key="item.id" class="bg-white rounded-2xl p-4 border border-gray-100 card-shadow">
+        <div class="flex justify-between items-start gap-2">
+          
+          <div class="flex-1 min-w-0">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h3 class="font-bold text-gray-800 text-base truncate">{{ item.name }}</h3>
+              <span class="px-2 py-0.5 text-[10px] bg-emerald-100 text-emerald-800 rounded-md font-bold shrink-0">
+                {{ item.category }}
+              </span>
+            </div>
+            <p v-if="item.memo" class="text-[11px] text-emerald-700 font-medium mt-1 truncate">
+              💬 {{ item.memo }}
+            </p>
+          </div>
+          
+          <div class="flex items-center gap-2 shrink-0">
+            <span v-if="item.location" class="text-xs text-gray-500 font-medium max-w-[120px] truncate" :title="item.location">
+              📍 {{ item.location }}
+            </span>
+
+            <div class="relative dropdown-container">
+              <button @click.stop="toggleDropdown(item)" class="text-gray-400 hover:text-gray-600 p-1">
+                <i class="fa-solid fa-ellipsis-vertical"></i>
+              </button>
+              <div v-if="item.showDrop" class="absolute right-0 mt-1 w-28 bg-white border rounded-xl shadow-lg z-20 py-1 text-xs text-left" @click.stop>
+                <button @click="openEditModal(item)" class="w-full px-3 py-2 hover:bg-gray-50 text-gray-700 font-medium">
+                  ✏️ 식당 정보 수정
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <button @click="item.expanded = !item.expanded" 
+                class="w-full mt-3 py-2 bg-emerald-50 text-emerald-700 font-bold text-xs rounded-xl flex items-center justify-center gap-1">
+          🍽️ 메뉴 보기 {{ item.expanded ? '▲' : '▼' }}
+        </button>
+
+        <div v-if="item.expanded" class="mt-3 space-y-2 border-t border-gray-100 pt-2">
+          <div v-for="menu in item.menus" :key="menu.name" class="flex justify-between text-xs py-1 border-b border-gray-50">
+            <span class="text-gray-700 font-medium">{{ menu.name }}</span>
+            <span class="text-terracotta font-bold">{{ menu.price.toLocaleString() }}원</span>
+          </div>
+        </div>
+
+        <div v-if="isAdmin" class="mt-2 flex justify-between border-t pt-1 text-xs text-gray-400">
+          <button @click="moveItem(restaurants, idx, -1)">▲ 위로</button>
+          <button @click="deleteItem(restaurants, idx)" class="text-red-400">삭제</button>
+          <button @click="moveItem(restaurants, idx, 1)">▼ 아래로</button>
+        </div>
+      </div>
+      <div v-if="filteredRestaurants.length === 0" class="text-center py-12 text-gray-400 text-xs">
+        선택한 카테고리에 등록된 음식점이 없습니다.
+      </div>
+    </div>
+
+  </main>
+
+  <div v-if="currentTab === 'restaurant'" class="fixed bottom-6 right-6 z-30 flex flex-col gap-2">
+    <button @click.stop="rollDice" class="w-14 h-14 bg-hunter text-white rounded-full shadow-2xl flex items-center justify-center text-2xl hover:scale-105 active:scale-95 transition-all">
+      🎲
+    </button>
+  </div>
+
+  <div v-if="showModal" class="fixed inset-0 bg-black/50 z-40 flex items-end sm:items-center justify-center p-0 sm:p-4" @click="showModal = false">
+    <div class="bg-white w-full max-w-md rounded-t-3xl sm:rounded-2xl p-5 max-h-[90vh] overflow-y-auto" @click.stop>
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="font-bold text-lg text-gray-800">{{ isEditing ? '식당 정보 수정' : '식당 추가하기' }}</h2>
+        <button @click="showModal = false" class="text-gray-400 text-xl">&times;</button>
+      </div>
+
+      <form @submit.prevent="saveStore" class="space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-gray-600 mb-1">식당 종류</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" @click="form.type = 'cafeteria'" :class="form.type === 'cafeteria' ? 'bg-hunter text-white' : 'bg-gray-100 text-gray-600'" class="py-2 text-xs font-bold rounded-xl">🏢 구내식당</button>
+            <button type="button" @click="form.type = 'restaurant'" :class="form.type === 'restaurant' ? 'bg-hunter text-white' : 'bg-gray-100 text-gray-600'" class="py-2 text-xs font-bold rounded-xl">🍜 일반음식점</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-600 mb-1">식당 이름 *</label>
+          <input v-model="form.name" required placeholder="예: 본관 구내식당" class="w-full p-2.5 text-xs border rounded-xl bg-gray-50 focus:outline-none focus:border-hunter">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-600 mb-1">위치 간단 설명</label>
+          <input v-model="form.location" placeholder="예: 본관 2층, 옆건물 지하1층" class="w-full p-2.5 text-xs border rounded-xl bg-gray-50">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-gray-600 mb-1">한줄 메모</label>
+          <input v-model="form.memo" placeholder="예: 후식 커피 제공, 12시 이후 웨이팅" class="w-full p-2.5 text-xs border rounded-xl bg-gray-50">
+        </div>
+
+        <template v-if="form.type === 'cafeteria'">
+          <div>
+            <label class="block text-xs font-bold text-gray-600 mb-1">식사 금액(원)</label>
+            <input type="number" v-model.number="form.price" placeholder="예: 7500" class="w-full p-2.5 text-xs border rounded-xl bg-gray-50">
+          </div>
+          <div class="p-3 bg-gray-50 rounded-xl space-y-2">
+            <div class="flex justify-between items-center">
+              <span class="text-xs font-bold text-gray-700">인스타그램 연동 사용 유무</span>
+              <input type="checkbox" v-model="form.hasInsta" class="w-4 h-4 accent-hunter">
+            </div>
+            <input v-if="form.hasInsta" v-model="form.instaUrl" placeholder="인스타 URL 혹은 ID 입력" class="w-full p-2 text-xs border rounded-lg">
+          </div>
+        </template>
+
+        <template v-if="form.type === 'restaurant'">
+          <div>
+            <label class="block text-xs font-bold text-gray-600 mb-1">음식 카테고리</label>
+            <div class="grid grid-cols-3 gap-1.5">
+              <button type="button" v-for="cat in categories" :key="cat" @click="form.category = cat" :class="form.category === cat ? 'bg-terracotta text-white' : 'bg-gray-100 text-gray-600'" class="py-1.5 text-xs rounded-lg font-medium">{{ cat }}</button>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-bold text-gray-600 mb-1">메뉴 설정 (최소 1개) *</label>
+            <div v-for="(m, i) in form.menus" :key="i" class="flex gap-2 mb-2">
+              <input v-model="m.name" placeholder="메뉴명" required class="flex-1 p-2 text-xs border rounded-lg">
+              <input type="number" v-model.number="m.price" placeholder="가격" required class="w-24 p-2 text-xs border rounded-lg">
+              <button type="button" @click="form.menus.splice(i, 1)" v-if="form.menus.length > 1" class="text-red-400 text-xs px-1">✕</button>
+            </div>
+            <button type="button" @click="form.menus.push({name:'', price: null})" class="w-full py-2 border border-dashed border-terracotta text-terracotta text-xs font-bold rounded-xl">+ 메뉴 추가하기</button>
+          </div>
+        </template>
+
+        <button type="submit" class="w-full py-3 bg-terracotta text-white font-bold text-sm rounded-xl shadow-md hover:opacity-90 mt-4">
+          ✓ {{ isEditing ? '저장하기' : '등록하기' }}
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div v-if="showMenuTextModal" class="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4" @click="showMenuTextModal = false">
+    <div class="bg-white w-full max-w-md rounded-2xl p-5 shadow-2xl max-h-[90vh] overflow-y-auto" @click.stop>
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="font-bold text-base text-gray-800">📝 메뉴 수정하기</h2>
+        <button @click="showMenuTextModal = false" class="text-gray-400 text-xl">&times;</button>
+      </div>
+      <p class="text-xs text-gray-500 mb-3 font-medium">
+        식당: <span class="text-hunter font-bold">{{ editingCafeteria?.name }}</span> | 요일: <span class="text-terracotta font-bold">{{ selectedDay }}요일</span>
+      </p>
+      
+      <div class="mb-4 p-3 bg-gray-50 rounded-xl border border-gray-200">
+        <label class="block text-xs font-bold text-gray-600 mb-1.5">등록된 식단표 이미지</label>
+        
+        <div v-if="editingCafeteria?.weeklyImages && editingCafeteria.weeklyImages[selectedDay]" class="mb-2">
+          <img :src="editingCafeteria.weeklyImages[selectedDay]" class="w-full h-32 object-contain rounded-lg border bg-white" alt="식단 이미지">
+          <button @click="deleteCurrentImage" class="text-red-500 text-[10px] font-bold mt-1 hover:underline block text-right">✕ 이미지 삭제</button>
+        </div>
+        <div v-else class="text-[11px] text-gray-400 py-4 text-center bg-white rounded-lg border border-dashed mb-2">
+          등록된 이미지가 없습니다.
+        </div>
+
+        <label class="cursor-pointer block w-full py-2 bg-hunter text-white text-center font-bold text-xs rounded-lg shadow-sm">
+          <i class="fa-solid fa-cloud-arrow-up"></i> 이미지 등록 / 변경 (OCR 문자 인식)
+          <input type="file" accept="image/*" class="hidden" @change="handleImageUpload($event, editingCafeteria, true)">
+        </label>
+      </div>
+
+      <div>
+        <label class="block text-xs font-bold text-gray-600 mb-1">식단 메뉴 텍스트 직접 입력/수정</label>
+        <textarea v-model="editingMenuText" rows="5" placeholder="메뉴 내용을 줄바꿈하여 편하게 적어주세요." class="w-full p-3 text-xs border rounded-xl bg-gray-50 focus:outline-none focus:border-hunter whitespace-pre-line"></textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 mt-4">
+        <button @click="showMenuTextModal = false" class="py-2.5 bg-gray-100 text-gray-600 rounded-xl font-bold text-xs">취소</button>
+        <button @click="saveMenuText" class="py-2.5 bg-terracotta text-white rounded-xl font-bold text-xs shadow-md">변경사항 저장</button>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="showImageModal" class="fixed inset-0 bg-black/70 z-50 flex flex-col items-center justify-center p-4" @click="showImageModal = false">
+    <div class="max-w-full max-h-[80vh] relative bg-white p-2 rounded-2xl" @click.stop>
+      <button @click="showImageModal = false" class="absolute -top-10 right-0 text-white text-3xl font-bold">&times;</button>
+      <img :src="currentViewImage" class="max-w-full max-h-[75vh] object-contain rounded-xl" alt="메뉴 원본">
+    </div>
+  </div>
+
+  <div v-if="showDiceModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" @click="showDiceModal = false">
+    <div class="bg-white w-full max-w-sm rounded-2xl p-6 text-center shadow-2xl border border-gray-100" @click.stop>
+      <span class="text-4xl block mb-2 animate-bounce">🎲</span>
+      <h3 class="text-base font-bold text-gray-500 mb-1">오늘 점심 메뉴 결정 완료!</h3>
+      <p class="text-xs text-gray-400 mb-4">고민하지 말고 여기 어때요?</p>
+      
+      <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-4 mb-5">
+        <span class="inline-block text-[10px] bg-emerald-600 text-white font-black px-2 py-0.5 rounded mb-1">{{ pickedStore?.category }}</span>
+        <h2 class="text-xl font-black text-gray-800">{{ pickedStore?.name }}</h2>
+        <p class="text-xs text-gray-500 mt-1">📍 {{ pickedStore?.location || '위치 미등록' }}</p>
+        <p v-if="pickedStore?.memo" class="text-xs text-emerald-700 font-medium mt-2 bg-white/60 py-1 rounded">"{{ pickedStore?.memo }}"</p>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <button @click="rollDice" class="py-2.5 bg-gray-100 text-gray-700 rounded-xl font-bold text-xs">한 번 더 돌리기</button>
+        <button @click="showDiceModal = false" class="py-2.5 bg-hunter text-white rounded-xl font-bold text-xs shadow-md">여기 가기!</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const { createApp } = Vue;
+
+  createApp({
+    data() {
+      return {
+        showIntro: true,
+        currentTab: 'cafeteria',
+        selectedDay: '월',
+        selectedCategory: '전체',
+        todayName: '월',
+        days: ['월', '화', '수', '목', '금'],
+        categories: ['한식', '중식', '일식', '양식', '분식', '기타'],
+        isAdmin: false,
+        showModal: false,
+        isEditing: false,
+        
+        showMenuTextModal: false,
+        editingCafeteria: null,
+        editingMenuText: '',
+
+        showImageModal: false,
+        currentViewImage: '',
+
+        showDiceModal: false,
+        pickedStore: null,
+
+        cafeterias: JSON.parse(localStorage.getItem('cafeterias_v5')) || [
+          { id: 1, name: '오늘의 정식(본관)', location: '5층', price: 7500, memo: '11시 반 가야 한산함', hasInsta: false, showDrop: false, weeklyMenus: { '월': '바몬드카레라이스\n마늘쫑건새우볶음\n쪽파김무침\n그린샐러드' }, weeklyImages: {} },
+          { id: 2, name: '런치의 여유', location: '옆건물 지하1층', price: 7500, memo: '커피 500원 할인쿠폰', hasInsta: true, instaUrl: 'https://www.instagram.com/', showDrop: false, weeklyMenus: {} }
+        ],
+        restaurants: JSON.parse(localStorage.getItem('restaurants_v5')) || [
+          { id: 101, name: '카츠 신가', category: '일식', location: '에이스 1층', memo: '안심카츠 육즙 최고', showDrop: false, expanded: true, menus: [{ name: '안심카츠', price: 10500 }, { name: '함박카츠', price: 10500 }] },
+          { id: 102, name: '할머니네 한식', category: '한식', location: '사거리 코너', memo: '계란후라이 무한리필', showDrop: false, expanded: false, menus: [{ name: '김치찌개', price: 8000 }, { name: '제육볶음', price: 9000 }] }
+        ],
+
+        form: this.getEmptyForm()
+      }
+    },
+    computed: {
+      filteredRestaurants() {
+        if (this.selectedCategory === '전체') {
+          return this.restaurants;
+        }
+        return this.restaurants.filter(r => r.category === this.selectedCategory);
+      }
+    },
+    mounted() {
+      setTimeout(() => { this.showIntro = false; }, 2000);
+      
+      const dayIdx = new Date().getDay();
+      const map = ['', '월', '화', '수', '목', '금', ''];
+      if (dayIdx >= 1 && dayIdx <= 5) {
+        this.selectedDay = map[dayIdx];
+        this.todayName = map[dayIdx];
+      }
+
+      // PC 및 모바일 전역 Outside Click 핸들러 등록
+      document.addEventListener('click', this.handleOutsideClick);
+    },
+    beforeUnmount() {
+      document.removeEventListener('click', this.handleOutsideClick);
+    },
+    watch: {
+      cafeterias: { handler(val) { localStorage.setItem('cafeterias_v5', JSON.stringify(val)); }, deep: true },
+      restaurants: { handler(val) { localStorage.setItem('restaurants_v5', JSON.stringify(val)); }, deep: true }
+    },
+    methods: {
+      getEmptyForm() {
+        return { id: null, type: 'cafeteria', name: '', location: '', price: null, memo: '', hasInsta: false, instaUrl: 'https://www.instagram.com/', category: '한식', menus: [{ name: '', price: null }] };
+      },
+      // PC/모바일 전역 클릭 시 점 3개 메뉴 닫기
+      handleOutsideClick(e) {
+        if (!e.target.closest('.dropdown-container')) {
+          this.closeAllDropdowns();
+        }
+      },
+      closeAllDropdowns() {
+        this.cafeterias.forEach(x => x.showDrop = false);
+        this.restaurants.forEach(x => x.showDrop = false);
+      },
+      toggleDropdown(item) {
+        const currentStatus = item.showDrop;
+        this.closeAllDropdowns();
+        item.showDrop = !currentStatus;
+      },
+      toggleAdmin() {
+        if (!this.isAdmin) {
+          const id = prompt('관리자 ID를 입력하세요:');
+          if (id === 'lunch') {
+            this.isAdmin = true;
+          } else {
+            alert('인증 정보가 올바르지 않습니다.');
+          }
+        } else {
+          this.isAdmin = false;
+        }
+      },
+      openAddModal() {
+        this.isEditing = false;
+        this.form = this.getEmptyForm();
+        this.form.type = this.currentTab;
+        this.showModal = true;
+      },
+      openEditModal(item) {
+        this.closeAllDropdowns();
+        this.isEditing = true;
+        this.form = JSON.parse(JSON.stringify(item));
+        this.form.type = item.category ? 'restaurant' : 'cafeteria';
+        this.showModal = true;
+      },
+      saveStore() {
+        if (this.form.type === 'cafeteria') {
+          if (this.isEditing) {
+            const idx = this.cafeterias.findIndex(x => x.id === this.form.id);
+            if (idx !== -1) this.cafeterias[idx] = { ...this.cafeterias[idx], ...this.form };
+          } else {
+            this.cafeterias.push({ ...this.form, id: Date.now(), showDrop: false, weeklyMenus: {}, weeklyImages: {} });
+          }
+        } else {
+          if (this.isEditing) {
+            const idx = this.restaurants.findIndex(x => x.id === this.form.id);
+            if (idx !== -1) this.restaurants[idx] = { ...this.restaurants[idx], ...this.form };
+          } else {
+            this.restaurants.push({ ...this.form, id: Date.now(), showDrop: false, expanded: false });
+          }
+        }
+        this.showModal = false;
+      },
+      openMenuTextModal(item) {
+        this.closeAllDropdowns();
+        this.editingCafeteria = item;
+        if (!item.weeklyMenus) item.weeklyMenus = {};
+        this.editingMenuText = item.weeklyMenus[this.selectedDay] || '';
+        this.showMenuTextModal = true;
+      },
+      saveMenuText() {
+        if (this.editingCafeteria) {
+          if (!this.editingCafeteria.weeklyMenus) this.editingCafeteria.weeklyMenus = {};
+          this.editingCafeteria.weeklyMenus[this.selectedDay] = this.editingMenuText;
+          alert('식단 텍스트가 저장되었습니다.');
+        }
+        this.showMenuTextModal = false;
+      },
+      deleteCurrentImage() {
+        if (this.editingCafeteria && this.editingCafeteria.weeklyImages) {
+          delete this.editingCafeteria.weeklyImages[this.selectedDay];
+          alert('이미지가 삭제되었습니다.');
+        }
+      },
+      viewMenuImage(imgBase64) {
+        this.currentViewImage = imgBase64;
+        this.showImageModal = true;
+      },
+      rollDice() {
+        if (this.restaurants.length === 0) {
+          alert('추천을 시작할 일반음식점 데이터가 없습니다. 식당을 먼저 추가해주세요!');
+          return;
+        }
+        const randomIndex = Math.floor(Math.random() * this.restaurants.length);
+        this.pickedStore = this.restaurants[randomIndex];
+        this.showDiceModal = true;
+      },
+      async handleImageUpload(event, item, isInModal = false) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          if (!item.weeklyImages) item.weeklyImages = {};
+          item.weeklyImages[this.selectedDay] = e.target.result;
+        };
+        reader.readAsDataURL(file);
+
+        alert('텍스트 문자 정밀 변환(OCR)을 시작합니다. 5~10초만 기다려주세요.');
+        
+        try {
+          const { data: { text } } = await Tesseract.recognize(file, 'kor');
+          if (!item.weeklyMenus) item.weeklyMenus = {};
+          item.weeklyMenus[this.selectedDay] = text.trim();
+          
+          if (isInModal) {
+            this.editingMenuText = text.trim();
+          }
+          alert('식단표 텍스트 변환 성공!');
+        } catch (e) {
+          alert('변환 중 일시적 오류 발생. 직접 텍스트 입력을 권장합니다.');
+        }
+      },
+      moveItem(list, idx, dir) {
+        const target = idx + dir;
+        if (target < 0 || target >= list.length) return;
+        const temp = list[idx];
+        list[idx] = list[target];
+        list[target] = temp;
+      },
+      deleteItem(list, idx) {
+        if (confirm('이 식당을 전체 삭제하시겠습니까?')) {
+          list.splice(idx, 1);
+        }
+      }
+    }
+  }).mount('#app');
+</script>
+</body>
+</html>
